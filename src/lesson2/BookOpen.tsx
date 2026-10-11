@@ -75,7 +75,15 @@ const PageFace: React.FC<{ num?: number; children?: React.ReactNode; side: "left
         </div>
       </>
     )}
-    <div style={{ position: "absolute", inset: 0, background: `rgba(30,20,5,${shade})` }} />
+    {shade > 0.001 && (
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `linear-gradient(to ${side === "left" ? "left" : "right"}, rgba(30,20,5,${shade * 0.45}), rgba(30,20,5,${shade}) 85%, rgba(30,20,5,${shade * 0.8}))`,
+        }}
+      />
+    )}
   </div>
 );
 
@@ -139,14 +147,55 @@ export const BookOpen: React.FC<{ t: number }> = ({ t }) => {
   const closed = { x: X0, y: Y0, w: PAGE.w, h: PAGE.h, r: 10 };
   const shape = rectLerp(cRect(HEART_C.x, HEART_C.y, HEART_R * 2, HEART_R * 2), closed, morph);
   const reveal = gl(t, T.book + 0.45, 0.8); // cover photo dissolves out of the ink
-  const bgReveal = gl(t, T.book + 0.3, 1.0); // dark room dissolves into paper from the book outward
+  // the room floods with paper from the heart outward (eased by area), the source rides the morph
+  const bgReveal = gl(t, T.book - 0.05, 0.9);
+  const fx = shape.x + shape.w / 2;
+  const fy = shape.y + shape.h / 2;
+  const floodR = Math.sqrt(bgReveal) * 1900 + HEART_R * (1 - bgReveal);
   const shift = -(PAGE.w / 2) * gl(t, T.coverOpen, 1.0); // recentre the open spread
   const ang = (t0: number, d = 0.8) => 180 * gl(t, t0, d);
   const coverA = ang(T.coverOpen, 1.0);
   const leafA = ang(T.riffle, 0.75);
   const leafB = ang(T.riffle + 0.55, 0.75);
-  const zOf = (a: number, i: number) => (a < 90 ? 50 - i : 50 + i);
-  const shadeOf = (a: number) => 0.18 * Math.sin((a * Math.PI) / 180);
+  const zOf = (a: number, i: number) => (a < 90 ? 500 - 10 * i : 500 + 10 * i);
+  const shadeOf = (a: number) => 0.26 * Math.sin((a * Math.PI) / 180);
+  const spine = X0 + shift + PAGE.w;
+  /** the soft shadow a lifted leaf casts just past its edge, on the page it is over */
+  const castShadow = (a: number, i: number) => {
+    const s = Math.sin((a * Math.PI) / 180);
+    if (s < 0.01 || a >= 179.5) return null;
+    const right = a > 90;
+    if (right && i === 0) return null; // nothing under the cover on the right but the table
+    const edge = PAGE.w * Math.abs(Math.cos((a * Math.PI) / 180));
+    const spread = 40 + 150 * s;
+    return (
+      <div
+        key={`sh${i}`}
+        style={{
+          position: "absolute",
+          left: right ? spine : spine - PAGE.w,
+          top: Y0,
+          width: PAGE.w,
+          height: PAGE.h,
+          zIndex: zOf(a, i) - 5,
+          overflow: "hidden",
+          borderRadius: right ? "2px 10px 10px 2px" : "10px 2px 2px 10px",
+          pointerEvents: "none",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            bottom: 0,
+            left: right ? 0 : PAGE.w - edge - spread,
+            width: edge + spread,
+            background: `linear-gradient(to ${right ? "right" : "left"}, rgba(40,25,5,${0.3 * s}) ${(edge / (edge + spread)) * 100}%, rgba(40,25,5,0))`,
+          }}
+        />
+      </div>
+    );
+  };
   const opened = t >= T.coverOpen;
 
   return (
@@ -161,8 +210,8 @@ export const BookOpen: React.FC<{ t: number }> = ({ t }) => {
             right: -600,
             bottom: -600,
             background: NIGHT,
-            WebkitMaskImage: `radial-gradient(circle at ${960 + 600}px ${540 + 600}px, transparent ${bgReveal * 1500 - 200}px, black ${bgReveal * 1500}px)`,
-            maskImage: `radial-gradient(circle at ${960 + 600}px ${540 + 600}px, transparent ${bgReveal * 1500 - 200}px, black ${bgReveal * 1500}px)`,
+            WebkitMaskImage: `radial-gradient(circle at ${fx + 600}px ${fy + 600}px, transparent ${floodR - 160}px, black ${floodR}px)`,
+            maskImage: `radial-gradient(circle at ${fx + 600}px ${fy + 600}px, transparent ${floodR - 160}px, black ${floodR}px)`,
           }}
         />
       )}
@@ -190,6 +239,9 @@ export const BookOpen: React.FC<{ t: number }> = ({ t }) => {
           {/* the same drop shadow as the closed cover, widening with the spread (no pop when 3D starts) */}
           <div style={{ position: "absolute", left: X0 + shift, top: Y0, width: PAGE.w * (1 + gl(t, T.coverOpen, 1.0)), height: PAGE.h, borderRadius: 10, boxShadow: "0 30px 60px rgba(40,25,5,0.3)" }} />
           <div style={{ position: "absolute", left: X0 + shift - 6, top: Y0 + 6, width: PAGE.w * (1 + gl(t, T.coverOpen, 1.0)) + 12, height: PAGE.h + 4, borderRadius: 12, background: "#DDD0B4", opacity: sp(t, T.coverOpen + 0.3, SOFT) }} />
+          {castShadow(coverA, 0)}
+          {castShadow(leafA, 1)}
+          {castShadow(leafB, 2)}
           {/* base left page: p. 55 */}
           <div style={{ position: "absolute", left: X0 + shift, top: Y0, width: PAGE.w, height: PAGE.h, zIndex: 10 }}>
             <PageFace side="left" num={55} shade={0}>

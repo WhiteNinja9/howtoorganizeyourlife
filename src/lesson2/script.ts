@@ -58,36 +58,53 @@ export const T = {
   unfoldWord: 62.5,
 };
 
-export const SCENES = { night: 0, heart: T.heart, book: T.book, dawn: T.dark + 0.6, close: T.toPill };
+export const SCENES = { night: 0, heart: T.heart, book: T.book, dawn: T.dark + 0.7, close: T.toPill };
 
-/** Eyelid openness keys [t, openness 0..1, glide s]. 1 = no lids. */
+/** Eyelid openness keys [t, openness 0..1, glide s]. 1 = no lids. Closes are fast, opens slower. */
 export const LIDS: [number, number, number?][] = [
   [0, 1, 0],
-  [T.dotFlood + 0.45, 0, 0.01],
-  [T.eyesOpen, 0.35, 0.3],
-  [T.eyesOpen + 0.35, 0.18, 0.18],
-  [T.eyesOpen + 0.55, 1, 0.75],
-  // quick natural blinks while scrolling
-  [5.55, 0, 0.09],
-  [5.66, 1, 0.22],
-  // the guilty, heavy blink on "that" card
-  [T.heavyBlink, 0.22, 0.45],
-  [T.heavyBlink + 0.75, 1, 0.6],
-  // slow close after the quote; open onto the heart (both black, so the switch is invisible)
-  [T.eyesClose, 0, 0.55],
-  [T.heart, 1, 0.01],
-  // the book page fades to darkness: close again
-  [T.dark, 0, 0.6],
-  // open slowly onto dawn, with one flutter
-  [T.dawn, 0.4, 0.5],
-  [T.dawn + 0.6, 0.25, 0.25],
-  [T.dawn + 0.9, 1, 0.9],
+  [T.dotFlood + 0.45, 0, 0.01], // closed under the flood
+  // waking at night: two flutters, then open
+  [T.eyesOpen, 0.3, 0.35],
+  [T.eyesOpen + 0.42, 0.1, 0.12],
+  [T.eyesOpen + 0.62, 0.58, 0.3],
+  [T.eyesOpen + 1.0, 0.44, 0.12],
+  [T.eyesOpen + 1.2, 1, 0.6],
+  // a natural blink between swipes
+  [5.5, 0, 0.08],
+  [5.62, 1, 0.22],
+  // the guilty, heavy blink on the sensitive post: half-close, linger, droop, then open
+  [T.heavyBlink, 0.16, 0.42],
+  [T.heavyBlink + 0.62, 0.42, 0.28],
+  [T.heavyBlink + 0.95, 0.08, 0.22],
+  [T.heavyBlink + 1.25, 1, 0.55],
+  // after the quote: the eyes fight to stay open, then close
+  [12.15, 0.34, 0.45],
+  [12.65, 0.5, 0.16],
+  [12.84, 0, 0.12],
+  [T.heart, 1, 0.01], // the heart scene is behind closed eyes (same black): opening is invisible
+  // the book page: close in front of the light (lids glow warm)
+  [T.dark, 0.3, 0.35],
+  [T.dark + 0.42, 0, 0.22],
+  // dawn: waking flutters, then a slow full open
+  [T.dawn, 0.24, 0.35],
+  [T.dawn + 0.42, 0.08, 0.14],
+  [T.dawn + 0.62, 0.62, 0.32],
+  [T.dawn + 1.0, 0.45, 0.12],
+  [T.dawn + 1.2, 1, 0.75],
+];
+
+/** Light through the lids: 0 = dark room (NIGHT), 1 = warm red (eyes closed in front of light). */
+export const TINT: [number, number, number?][] = [
+  [0, 0, 0],
+  [T.dark - 0.2, 1, 0.5],
+  [T.dawn + 2.2, 0, 0.4],
 ];
 
 export const CAM: CamKey[] = [
   [0, 960, 540, 1],
   [3.0, 960, 520, 1.25, 1.2],
-  [T.theCard + 0.1, 960, 470, 1.6, 0.8],
+  [T.theCard + 0.1, 960, 560, 1.5, 0.8],
   [T.bilal - 0.4, 960, 500, 1.35, 0.8],
   [T.heart, 960, 540, 1, 0.01],
   [T.ran - 0.3, 960, 540, 1, 0.5],
@@ -95,7 +112,7 @@ export const CAM: CamKey[] = [
   [T.coverOpen, 960, 540, 1.0, 1.0],
   [T.zoomPage, 1170, 630, 2.1, 1.0],
   [T.bookOut, 960, 540, 1.15, 0.9],
-  [T.dark + 0.6, 960, 540, 1, 0.01],
+  [T.dark + 0.7, 960, 540, 1, 0.01],
   [T.polish - 0.2, 960, 540, 1, 0.5],
   [T.clicks[0] - 0.4, 960, 500, 1.1, 0.7],
   [T.clean, 960, 520, 1.0, 0.8],
@@ -130,6 +147,7 @@ export const CUES: Cue[] = [
   [T.doorText, "shimmer", -8],
   [T.dawn, "soft", 0],
   [T.polish, "pop", -3],
+  [T.polish + 0.3, "air", -5],
   ...T.clicks.map((t) => [t, "click", -1] as Cue),
   ...Array.from({ length: 9 }, (_, i) => [T.hold[0] + i * 0.12, "tick", -10] as Cue),
   [T.clean, "shimmer", -4],

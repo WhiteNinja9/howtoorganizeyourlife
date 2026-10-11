@@ -22,6 +22,8 @@ const spotAt = (i: number) => T.spread + 2.4 * Math.pow(i / SPOTS.length, 0.7);
 /** Black coverage of the heart from the scene's events (shared with the polish scene). */
 export const HeartDisc: React.FC<{ t: number; id: string; covered?: boolean }> = ({ t, id, covered }) => {
   const grow = covered ? 1 : gl(t, T.covered - 0.6, 0.8);
+  const ringK = covered ? 0 : gl(t, T.book - 0.55, 0.5);
+  const ringGap = 8 * (1 - ringK);
   const gooAmt = covered ? 0 : Math.min(inv(T.spread, T.spread + 0.3, t), 1 - inv(T.covered + 0.2, T.covered + 0.5, t));
   return (
     <>
@@ -50,7 +52,21 @@ export const HeartDisc: React.FC<{ t: number; id: string; covered?: boolean }> =
           }}
         />
       </div>
-      <div style={{ position: "absolute", left: HEART_C.x - HEART_R - 8, top: HEART_C.y - HEART_R - 8, width: HEART_R * 2 + 16, height: HEART_R * 2 + 16, borderRadius: HEART_R + 8, border: "2px solid rgba(244,239,230,0.55)", boxSizing: "border-box" }} />
+      {/* outline ring: tightens onto the disc and leaves before the heart becomes the book */}
+      {ringK < 0.999 && (
+        <div
+          style={{
+            position: "absolute",
+            left: HEART_C.x - HEART_R - ringGap,
+            top: HEART_C.y - HEART_R - ringGap,
+            width: HEART_R * 2 + 2 * ringGap,
+            height: HEART_R * 2 + 2 * ringGap,
+            borderRadius: HEART_R + ringGap,
+            border: `2px solid rgba(244,239,230,${0.55 * (1 - ringK * ringK)})`,
+            boxSizing: "border-box",
+          }}
+        />
+      )}
     </>
   );
 };

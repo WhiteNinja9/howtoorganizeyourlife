@@ -2,11 +2,11 @@ import React from "react";
 import { AbsoluteFill, Audio, staticFile, useCurrentFrame } from "remotion";
 import { CameraMotionBlur } from "@remotion/motion-blur";
 import { C, F } from "../lib/theme";
-import { camAt, camTransform, exitK, FPS, H, sp, W } from "../lib/motion";
+import { camAt, camTransform, exitK, FPS, gl, glideKeys, H, sp, W } from "../lib/motion";
 import { RefChip, Words } from "../ui/kit";
 import { Lids, lidOpenness } from "../ui/Lids";
 import { BILAL } from "./pages";
-import { CAM, DURATION, LIDS, SCENES, T } from "./script";
+import { CAM, DURATION, LIDS, SCENES, T, TINT } from "./script";
 import { Night } from "./Night";
 import { Heart } from "./Heart";
 import { BookOpen } from "./BookOpen";
@@ -45,6 +45,9 @@ const Caption: React.FC<{ t: number; at: number; out: number; text: string; refT
   </div>
 );
 
+// the scrim (and the defocus under it) stays until the eyes have closed: the quote leaves first
+const scrimOf = (t: number) => sp(t, T.bilal - 0.3, { w: 8, z: 1 }) * (1 - gl(t, T.bilalOut + 0.25, 0.6) * 0.45) * (t < T.heart ? 1 : 0);
+
 const World: React.FC = () => {
   const frame = useCurrentFrame();
   const t = frame / FPS;
@@ -52,23 +55,33 @@ const World: React.FC = () => {
   for (const [start, S] of ORDER) if (t >= start) Scene = S;
   const cam = camAt(t, CAM);
   const o = lidOpenness(t, LIDS);
-  const defocus = (1 - o) * 7; // eyes half-closed = the world goes soft
-  const scrim = sp(t, T.bilal - 0.3, { w: 8, z: 1 }) * (1 - exitK(t, T.bilalOut, 0.35).off) * (t < T.heart ? 1 : 0);
+  // focus lags the lids: the image sharpens a beat after the eyes open
+  const oLag = Math.min(o, lidOpenness(t - 0.22, LIDS), lidOpenness(t - 0.4, LIDS) * 0.5 + 0.5);
+  const defocus = (1 - oLag) * 11 + 9 * scrimOf(t);
+  // the head dips a little as the eyes close
+  const dip = 1 - o;
+  const tint = glideKeys(t, 0, TINT.slice(1).map(([t0, v, d]) => [t0, v, d ?? 0.4]));
+  const scrim = scrimOf(t);
   const cap = t >= T.mark1 - 0.5 && t < T.bookOut + 0.6;
   return (
     <AbsoluteFill style={{ background: C.paper, overflow: "hidden" }}>
-      <AbsoluteFill style={{ filter: defocus > 0.05 ? `blur(${defocus}px)` : undefined }}>
+      <AbsoluteFill
+        style={{
+          filter: defocus > 0.05 ? `blur(${defocus}px)` : undefined,
+          transform: dip > 0.001 ? `translateY(${14 * dip}px) scale(${1 + 0.025 * dip})` : undefined,
+        }}
+      >
         <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, transformOrigin: "0 0", transform: camTransform(cam) }}>
           <Scene t={t} />
         </div>
       </AbsoluteFill>
 
       {/* "Look at Whom you disobeyed" — over the dimmed phone */}
-      {scrim > 0.001 && <AbsoluteFill style={{ background: `rgba(2,3,4,${0.72 * scrim})` }} />}
+      {scrim > 0.001 && <AbsoluteFill style={{ background: `rgba(5,6,7,${0.84 * scrim})` }} />}
       {t >= T.bilal && t < T.heart && (
         <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 18 }}>
-          <Words t={t} at={T.bilal} out={T.bilalOut} per={0.08} rtl text={BILAL} pad="0.3em" style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 66, color: C.white, lineHeight: 1.6, justifyContent: "center", maxWidth: 1500 }} />
-          <Words t={t} at={T.bilal + 1.0} out={T.bilalOut} per={0.03} text="“Do not look at how small the sin is. Look at Whom you disobeyed.”" style={{ fontFamily: F.ui, fontSize: 38, color: "#D9D4CA", justifyContent: "center" }} />
+          <Words t={t} at={T.bilal} out={T.bilalOut} per={0.08} rtl text={BILAL} pad="0.3em" style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 66, color: C.white, lineHeight: 1.6, justifyContent: "center", width: 1500 }} />
+          <Words t={t} at={T.bilal + 1.0} out={T.bilalOut} per={0.03} text="“Do not look at how small the sin is. Look at Whom you disobeyed.”" style={{ fontFamily: F.ui, fontSize: 38, color: "#D9D4CA", justifyContent: "center", width: 1500 }} />
           <div style={{ height: 8 }} />
           <RefChip t={t} at={T.bilal + 1.7} out={T.bilalOut} color={C.goldSoft}>
             BILĀL IBN SAʿD · AL-DĀʾ WA AL-DAWĀʾ, P. 51
@@ -84,7 +97,7 @@ const World: React.FC = () => {
         </>
       )}
 
-      <Lids t={t} keys={LIDS} id={`lid${Math.round(t * 6000)}`} />
+      <Lids t={t} keys={LIDS} tint={tint} id={`lid${Math.round(t * 6000)}`} />
 
       {/* in the dark, behind closed eyes */}
       {t >= T.doorText - 0.1 && t < T.dawn + 0.4 && (

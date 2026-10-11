@@ -1,13 +1,14 @@
 import React from "react";
 import { C, F, SHADOW } from "../lib/theme";
-import { exitK, gl, inv, POP, sp, tq } from "../lib/motion";
-import { Ayah, Digits, RefChip, Rise, Words } from "../ui/kit";
+import { exitK, gl, inv, lerp, POP, sp, tq } from "../lib/motion";
+import { Ayah, Digits, GooDefs, RefChip, Rise, Words } from "../ui/kit";
+import { HEART_C, HEART_R, SPOTS } from "./Heart";
 import { Cursor } from "../ui/Cursor";
 import { AYAT2 } from "./ayat";
 import { HADITH } from "./pages";
 import { T } from "./script";
 
-/** Dawn: 39:53, then istighfār polishes the black heart from its centre outward. */
+/** Dawn: 39:53, then istighfār polishes the black heart, spot by spot. */
 export const DAWN_HEART = { x: 960, y: 470, r: 170 };
 const BTN = { x: 960, y: 800, w: 420, h: 104 };
 
@@ -24,41 +25,53 @@ export const DawnBg: React.FC = () => (
   />
 );
 
-/** How much black is left on the heart (1 = covered, 0 = polished). */
-export const blackLeft = (t: number) => {
-  let c = 1;
-  for (const k of T.clicks) c -= 0.06 * gl(t, k, 0.25);
-  c -= (1 - 0.06 * T.clicks.length) * inv(T.hold[0], T.hold[1], t);
-  return Math.max(0, c);
+/**
+ * The sin scene played backwards: the black cover cracks into the same spots at the first click,
+ * each click lifts a few (biggest first), and the long press lifts the rest.
+ */
+const SC = DAWN_HEART.r / HEART_R;
+const DSPOTS = SPOTS.map((s, i) => ({ x: DAWN_HEART.r + (s.x - HEART_C.x) * SC, y: DAWN_HEART.r + (s.y - HEART_C.y) * SC, r: s.r * SC, i }));
+const PER_CLICK = 3;
+const goneAt = (i: number) => {
+  const k = SPOTS.length - 1 - i; // biggest (last placed) first
+  const j = Math.floor(k / PER_CLICK);
+  if (j < T.clicks.length) return T.clicks[j] + (k % PER_CLICK) * 0.04;
+  const rest = SPOTS.length - PER_CLICK * T.clicks.length;
+  return T.hold[0] + 0.1 + (T.hold[1] - T.hold[0] - 0.45) * ((k - PER_CLICK * T.clicks.length) / (rest - 1));
 };
+/** contraction eased by area */
+const shrink = (t: number, at: number, d = 0.4) => Math.sqrt(1 - gl(t, at, d));
 
 export const PolishedHeart: React.FC<{ t: number; scale?: number }> = ({ t, scale = 1 }) => {
-  const c = blackLeft(t);
   const { x, y, r } = DAWN_HEART;
-  const hole = Math.sqrt(1 - c) * (r + 30); // polished from the centre outward, evened by area
   const press = T.clicks.reduce((a, k) => a + sp(t, k - 0.05, { w: 50, z: 1 }) - sp(t, k + 0.06, { w: 24, z: 0.7 }), 0);
+  const cover = shrink(t, T.clicks[0] - 0.02, 0.45);
+  const done = t >= T.hold[1] + 0.05;
+  const goo = done ? 0 : Math.min(1, inv(T.clicks[0] - 0.12, T.clicks[0], t));
+  const id = `pg${Math.round(t * 6000)}`;
   return (
     <div style={{ position: "absolute", left: x - r, top: y - r, width: r * 2, height: r * 2, transform: `scale(${scale * (1 - 0.02 * press)})` }}>
-      <div style={{ position: "absolute", inset: 0, borderRadius: r, background: C.white, boxShadow: SHADOW }} />
-      {c > 0.001 && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            borderRadius: r,
-            background: C.ink,
-            WebkitMaskImage: `radial-gradient(circle at 50% 50%, transparent ${hole - 26}px, black ${hole}px)`,
-            maskImage: `radial-gradient(circle at 50% 50%, transparent ${hole - 26}px, black ${hole}px)`,
-          }}
-        />
-      )}
+      <div style={{ position: "absolute", inset: 0, borderRadius: r, background: C.white, boxShadow: SHADOW, overflow: "hidden" }}>
+        {!done && (
+          <div style={{ position: "absolute", inset: 0, filter: goo > 0.001 ? `url(#${id})` : undefined }}>
+            {goo > 0.001 && <GooDefs id={id} blur={14 * goo} />}
+            {DSPOTS.map((s) => {
+              const k = t < T.clicks[0] - 0.1 ? 1 : shrink(t, goneAt(s.i), 0.38);
+              if (k < 0.002) return null;
+              return <div key={s.i} style={{ position: "absolute", left: s.x - s.r, top: s.y - s.r, width: s.r * 2, height: s.r * 2, borderRadius: s.r, background: C.ink, transform: `scale(${k})` }} />;
+            })}
+            {cover > 0.002 && <div style={{ position: "absolute", inset: 0, borderRadius: r, background: C.ink, transform: `scale(${cover})` }} />}
+          </div>
+        )}
+      </div>
       <div style={{ position: "absolute", inset: -10, borderRadius: r + 10, border: `2px solid rgba(13,21,18,0.18)` }} />
     </div>
   );
 };
 
 export const Dawn: React.FC<{ t: number }> = ({ t }) => {
-  const heartK = sp(t, T.polish, POP);
+  // the heart comes back as a dot that opens (never zoom into a dot)
+  const heartK = sp(t, T.polish, POP) * lerp(14 / DAWN_HEART.r, 1, gl(t, T.polish + 0.22, 0.8));
   const btnK = sp(t, T.polish + 0.6, POP) * (1 - exitK(t, T.clean - 0.2, 0.3).off);
   let n = 0;
   for (const k of T.clicks) if (tq(t) >= k) n++;
