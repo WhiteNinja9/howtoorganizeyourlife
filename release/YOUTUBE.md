@@ -4,6 +4,7 @@ Files in this folder:
 - `Rise-for-the-Ummah-1080p60.mp4`: the video (1920×1080, 60 fps, 1:21, −14 LUFS)
 - `thumbnail.png`: 1280×720 thumbnail
 - `captions-en.srt`: English captions (upload them; YouTube indexes captions for search)
+- `pfp-emerald.png`: 800×800 profile picture (recommended; stands out in light and dark mode). `pfp-ink.png` is an alternative that blends into dark mode
 - `channel-banner.png`: 2560×1440 channel banner (everything important sits in the 1546×423 area every device shows)
 
 ## Channel name
