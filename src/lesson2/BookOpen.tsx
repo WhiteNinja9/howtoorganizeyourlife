@@ -122,25 +122,38 @@ const P54Body: React.FC<{ t: number }> = ({ t }) => (
   </>
 );
 
-/** A leaf hinged at the spine; angle 0 = lying on the left, 180 = turned over to the right. */
-const Leaf: React.FC<{ angle: number; x: number; z: number; front: React.ReactNode; back: React.ReactNode }> = ({ angle, x, z, front, back }) => (
-  <div
-    style={{
-      position: "absolute",
-      left: x,
-      top: Y0,
-      width: PAGE.w,
-      height: PAGE.h,
-      transformOrigin: "100% 50%",
-      transform: `rotateY(${angle}deg)`,
-      transformStyle: "preserve-3d",
-      zIndex: z,
-    }}
-  >
-    <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden" }}>{front}</div>
-    <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>{back}</div>
-  </div>
-);
+/**
+ * A leaf hinged at the spine; angle 0 = lying on the left, 180 = turned over to the right.
+ * A settled leaf is drawn flat with only its visible face (Chrome occasionally shows the hidden face of a
+ * 3D leaf for one frame during a long render; flat leaves cannot).
+ */
+const Leaf: React.FC<{ angle: number; x: number; z: number; front: React.ReactNode; back: React.ReactNode }> = ({ angle, x, z, front, back }) => {
+  if (angle <= 0 || angle >= 180) {
+    return (
+      <div style={{ position: "absolute", left: angle >= 180 ? x + PAGE.w : x, top: Y0, width: PAGE.w, height: PAGE.h, zIndex: z }}>
+        {angle >= 180 ? back : front}
+      </div>
+    );
+  }
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: x,
+        top: Y0,
+        width: PAGE.w,
+        height: PAGE.h,
+        transformOrigin: "100% 50%",
+        transform: `rotateY(${angle}deg)`,
+        transformStyle: "preserve-3d",
+        zIndex: z,
+      }}
+    >
+      <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden" }}>{front}</div>
+      <div style={{ position: "absolute", inset: 0, backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>{back}</div>
+    </div>
+  );
+};
 
 export const BookOpen: React.FC<{ t: number }> = ({ t }) => {
   const morph = gl(t, T.book, 0.8);
