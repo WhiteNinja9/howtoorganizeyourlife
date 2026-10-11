@@ -2,9 +2,10 @@ import React from "react";
 import { C, F, SHADOW } from "../lib/theme";
 import { contract, exitK, gl, multi, POP, Rect, sp, SOFT } from "../lib/motion";
 import { Mono, RefChip, Rise, Shape, tw, Words } from "../ui/kit";
+import { Img, staticFile } from "remotion";
 import { T } from "../script";
 
-/** Designed cover (a stand-in, not a photo). Plain double frame + arch outline — no star shapes. */
+/** Part 1 shows the real cover photo of al-Jawāb al-Kāfī; al-Fawāʾid is a drawn cover (double frame + arch, no star shapes). */
 export const BOOK: Rect = { x: 236, y: 170, w: 500, h: 740, r: 14 };
 
 export const CHAIN = [
@@ -23,13 +24,27 @@ export const CHAIN_LAST_W = chainW(CHAIN.length - 1);
 const ARCH = "M -62 70 V -6 C -62 -48 -24 -66 0 -96 C 24 -66 62 -48 62 -6 V 70";
 
 const Cover: React.FC<{ t: number }> = ({ t }) => {
-  const border = gl(t, T.cover, 1.1);
-  const arch = gl(t, T.cover + 0.2, 1.0);
+  const reveal = gl(t, T.cover - 0.1, 0.8);
   const paint = gl(t, T.repaint, 0.7);
+  const border = gl(t, T.repaint + 0.25, 1.1);
+  const arch = gl(t, T.repaint + 0.4, 1.0);
   const ctr: React.CSSProperties = { position: "absolute", left: 0, right: 0, textAlign: "center", direction: "rtl" };
   return (
     <>
-      {/* ink paints across from the right edge (Arabic books open from the right) */}
+      {/* the real cover (photo the owner supplied); the emerald dissolves outward from its centre */}
+      <Img src={staticFile("img/al-jawab-al-kafi.jpg")} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+      {reveal < 1 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: C.emerald,
+            WebkitMaskImage: `radial-gradient(circle at 50% 42%, transparent ${reveal * 710 - 90}px, black ${reveal * 710}px)`,
+            maskImage: `radial-gradient(circle at 50% 42%, transparent ${reveal * 710 - 90}px, black ${reveal * 710}px)`,
+          }}
+        />
+      )}
+      {/* ink paints across from the right edge (Arabic books open from the right) into al-Fawāʾid */}
       <div
         style={{
           position: "absolute",
@@ -48,23 +63,15 @@ const Cover: React.FC<{ t: number }> = ({ t }) => {
           <path d="M -40 70 V 4 C -40 -26 -14 -40 0 -62 C 14 -40 40 -26 40 4 V 70" fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - arch} />
         </g>
       </svg>
-      <div style={{ ...ctr, top: 300, fontFamily: F.ar, fontWeight: 700, fontSize: 70, color: C.goldSoft, lineHeight: 1.5 }}>
-        <Rise t={t} at={T.cover + 0.4} out={T.repaint} pad="0.3em">الداء والدواء</Rise>
-      </div>
       <div style={{ ...ctr, top: 300, fontFamily: F.ar, fontWeight: 700, fontSize: 80, color: C.goldSoft, lineHeight: 1.5 }}>
         <Rise t={t} at={T.repaint + 0.3} pad="0.3em">الفوائد</Rise>
       </div>
-      <div style={{ ...ctr, top: 430, fontFamily: F.ar, fontSize: 27, color: "rgba(255,253,248,0.8)", lineHeight: 1.6 }}>
-        <Rise t={t} at={T.cover + 0.6} out={T.repaint} pad="0.3em">الجواب الكافي</Rise>
-        <br />
-        <Rise t={t} at={T.cover + 0.66} out={T.repaint} pad="0.3em">لمن سأل عن الدواء الشافي</Rise>
-      </div>
-      <div style={{ position: "absolute", left: BOOK.w / 2 - 90, top: 556, width: 180, height: 2, background: C.gold, transform: `scaleX(${sp(t, T.cover + 0.8, SOFT)})` }} />
+      <div style={{ position: "absolute", left: BOOK.w / 2 - 90, top: 556, width: 180, height: 2, background: C.gold, transform: `scaleX(${sp(t, T.repaint + 0.45, SOFT)})` }} />
       <div style={{ ...ctr, top: 580, fontFamily: F.ar, fontWeight: 600, fontSize: 38, color: C.white, lineHeight: 1.6 }}>
-        <Rise t={t} at={T.cover + 0.9} pad="0.3em">ابن قيم الجوزية</Rise>
+        <Rise t={t} at={T.repaint + 0.5} pad="0.3em">ابن قيم الجوزية</Rise>
       </div>
       <div style={{ ...ctr, top: 646, fontFamily: F.ar, fontSize: 25, color: C.gold, lineHeight: 1.6 }}>
-        <Rise t={t} at={T.cover + 1.0} pad="0.3em">ت ٧٥١ هـ</Rise>
+        <Rise t={t} at={T.repaint + 0.6} pad="0.3em">ت ٧٥١ هـ</Rise>
       </div>
     </>
   );

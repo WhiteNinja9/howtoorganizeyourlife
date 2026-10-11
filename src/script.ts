@@ -133,7 +133,7 @@ export const CAM: CamKey[] = [
   [T.tour[4] - 0.55, ...tc("jumuah"), 1.7, 0.6],
   [T.overview, 960, 540, 1, 0.8],
   // 13:11 holds still; the book scene leans in on the cover, then reads still
-  [T.contract1 + 0.4, 486, 540, 1.3, 0.8],
+  [T.contract1 + 0.4, 486, 540, 1.12, 0.8], // the cover photo is low-res: lean in only a little
   [T.readCure - 0.6, 960, 540, 1, 0.8],
   [T.repaint, 486, 540, 1.3, 0.8],
   [T.chainHead - 0.4, 1290, 520, 1.5, 0.8],
