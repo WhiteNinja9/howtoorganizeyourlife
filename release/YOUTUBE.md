@@ -36,6 +36,26 @@ Keywords to add in Studio (Settings → Channel → Basic info → Keywords):
 islamic reminders, muslim productivity, organize your life islam, islamic motivation, ibn al qayyim,
 five daily prayers, muslim habits, quran reminders, deen, ummah
 
+## Lesson playlist
+
+Name: **Organize Your Life as a Muslim | Rise Lessons**
+Alternatives: "Rise Lessons: Building a Muslim Life, One Habit at a Time" · "The Muslim Life System: Lessons from Qur'an & Sunnah"
+
+```
+Short lessons on organizing your life as a Muslim, one habit at a time.
+
+Each lesson takes one idea from the Qur'an, the Sunnah and scholars like Ibn al-Qayyim and turns
+it into something you can practise today: building your day around the five prayers, habits that
+last, guarding your time, and healing the heart.
+
+Start with Lesson 1 and watch in order. Every verse and quote is sourced in each video's description.
+
+"The most beloved deeds to Allah are the most consistent, even if small." (al-Bukhārī & Muslim)
+```
+
+Number the videos in this playlist ("Lesson 1 · How to Organize Your Life as a Muslim") so viewers
+watch them in order; set the playlist order to Manual.
+
 ## Title (pick one)
 
 1. **How to Organize Your Life as a Muslim (Ibn al-Qayyim's Advice)** ← recommended: it targets the exact search people type
