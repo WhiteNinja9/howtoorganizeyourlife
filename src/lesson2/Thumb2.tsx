@@ -1,124 +1,94 @@
 import React from "react";
-import { AbsoluteFill, Img, staticFile } from "remotion";
+import { AbsoluteFill } from "remotion";
 import { C, F } from "../lib/theme";
-import { GooDefs } from "../ui/kit";
 import { NIGHT } from "../ui/Lids";
-import { HEART_C, HEART_R, SPOTS } from "./Heart";
+import { Post3 } from "./Night";
 
-/**
- * Lesson 2 thumbnail, 1280×720: the promise left, the stained heart (the film's own spots) right with the
- * real book behind it, and the way back along the bottom: covered → stained → polished.
- */
-const HC = { x: 1000, y: 318, r: 182 };
+/** Lesson 2 thumbnails, 1280×720. "look": the 1:47 a.m. phone. "spot": one sin, one black spot. */
+const WORD: React.CSSProperties = {
+  fontFamily: F.word,
+  fontWeight: 800,
+  fontVariationSettings: "'wdth' 125, 'wght' 800",
+  lineHeight: 0.92,
+  letterSpacing: "-0.02em",
+  color: C.white,
+};
 
-const Disc: React.FC<{ x: number; y: number; r: number; spots: number; full?: boolean; id: string; size?: number }> = ({ x, y, r, spots, full, id, size = 1 }) => {
-  const s = r / HEART_R;
+const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ display: "inline-block", background: C.paper, color: C.ink, fontFamily: F.ui, fontWeight: 600, fontSize: 30, padding: "9px 24px", borderRadius: 999 }}>{children}</div>
+);
+
+/** the film's phone: titanium frame, island, status bar at 1:47 with 9 %, the sensitive-content screen */
+const Phone: React.FC = () => {
+  const w = 400;
+  const h = 856;
+  const bez = 9;
   return (
-    <>
-    <div style={{ position: "absolute", left: x - r - 4, top: y - r - 4, width: r * 2 + 8, height: r * 2 + 8, borderRadius: r + 4, border: "2px solid rgba(244,239,230,0.45)", boxSizing: "border-box" }} />
-    <div style={{ position: "absolute", left: x - r, top: y - r, width: r * 2, height: r * 2, borderRadius: r, background: C.paper, overflow: "hidden" }}>
-      <GooDefs id={id} blur={3 + 3 * s} />
-      <div style={{ position: "absolute", inset: 0, filter: `url(#${id})` }}>
-        {full ? (
-          <div style={{ position: "absolute", inset: 0, borderRadius: r, background: C.ink }} />
-        ) : (
-          SPOTS.slice(0, spots).map((p, i) => {
-            const cx = r + (p.x - HEART_C.x) * s;
-            const cy = r + (p.y - HEART_C.y) * s;
-            const rr = p.r * s * size;
-            return <div key={i} style={{ position: "absolute", left: cx - rr, top: cy - rr, width: rr * 2, height: rr * 2, borderRadius: rr, background: C.ink }} />;
-          })
-        )}
+    <div style={{ position: "relative", width: w, height: h, borderRadius: 64, background: "linear-gradient(135deg, #5A5B60, #1C1D21 30%, #121316 60%, #44454A)", boxShadow: "0 60px 120px rgba(0,0,0,0.7)" }}>
+      <div style={{ position: "absolute", inset: bez, borderRadius: 64 - bez, overflow: "hidden", background: "#000" }}>
+        <Post3 />
+        <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 56, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 34px 0", fontFamily: F.ui, fontWeight: 600, fontSize: 19, color: "#fff" }}>
+          <span>1:47</span>
+          <span style={{ color: "#FF5A4E" }}>9%</span>
+        </div>
+        <div style={{ position: "absolute", left: w / 2 - bez - 62, top: 12, width: 124, height: 36, borderRadius: 18, background: "#000" }} />
       </div>
     </div>
-    </>
   );
 };
 
-export const Thumb2: React.FC = () => (
+const Cursor: React.FC<{ x: number; y: number; s?: number }> = ({ x, y, s = 1 }) => (
+  <svg style={{ position: "absolute", left: x, top: y, transform: `scale(${s})`, transformOrigin: "0 0", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.5))" }} width={40} height={52} viewBox="0 0 20 26">
+    <path d="M2 2 L2 21 L7 16.5 L10.5 24 L13.5 22.6 L10 15.4 L17 15.4 Z" fill="#fff" stroke="#000" strokeWidth={1.4} strokeLinejoin="round" />
+  </svg>
+);
+
+const Look: React.FC = () => (
   <AbsoluteFill style={{ background: NIGHT, overflow: "hidden" }}>
-    {/* the room at night: a low warm light from the right, like the screen-lit room in the film */}
-    <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 90% at 78% 45%, rgba(120,40,24,0.55), rgba(7,9,10,0) 70%)" }} />
-
-    {/* the real book behind the heart */}
-    <Img
-      src={staticFile("img/al-jawab-al-kafi.jpg")}
-      style={{
-        position: "absolute",
-        left: 1040,
-        top: 92,
-        width: 232,
-        height: 232 * 1.45,
-        objectFit: "cover",
-        borderRadius: 8,
-        transform: "rotate(8deg)",
-        boxShadow: "0 30px 60px rgba(0,0,0,0.6), 0 6px 14px rgba(0,0,0,0.4)",
-      }}
-    />
-
-    {/* the stained heart */}
-    <div style={{ position: "absolute", left: HC.x - HC.r - 10, top: HC.y - HC.r - 10, width: HC.r * 2 + 20, height: HC.r * 2 + 20, borderRadius: HC.r + 10, border: "3px solid rgba(244,239,230,0.5)", boxSizing: "border-box" }} />
-    <div style={{ position: "absolute", left: HC.x - HC.r, top: HC.y - HC.r, width: HC.r * 2, height: HC.r * 2, borderRadius: HC.r, boxShadow: "0 30px 70px rgba(0,0,0,0.6)" }} />
-    <Disc x={HC.x} y={HC.y} r={HC.r} spots={30} size={0.62} id="th-main" />
-    <div style={{ position: "absolute", left: HC.x - 200, width: 400, top: HC.y + HC.r + 22, textAlign: "center", fontFamily: F.mono, fontSize: 22, letterSpacing: "0.14em", color: "rgba(244,239,230,0.7)" }}>
-      YOUR HEART
+    {/* the screen lights the room */}
+    <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 55% 75% at 76% 52%, rgba(150,62,82,0.5), rgba(60,22,32,0.25) 45%, rgba(7,9,10,0) 75%)" }} />
+    <div style={{ position: "absolute", left: 872, top: 46, transform: "rotate(-7deg) scale(0.76)", transformOrigin: "0 0" }}>
+      <Phone />
     </div>
+    <Cursor x={1128} y={604} s={1.2} />
 
-    {/* the promise */}
-    <div style={{ position: "absolute", left: 64, top: 84 }}>
-      <div
-        style={{
-          display: "inline-block",
-          background: C.paper,
-          color: C.ink,
-          fontFamily: F.ui,
-          fontWeight: 600,
-          fontSize: 32,
-          padding: "10px 26px",
-          borderRadius: 999,
-        }}
-      >
-        Ibn al-Qayyim
-      </div>
-      <div
-        style={{
-          marginTop: 22,
-          fontFamily: F.word,
-          fontWeight: 800,
-          fontVariationSettings: "'wdth' 125, 'wght' 800",
-          fontSize: 84,
-          lineHeight: 0.94,
-          letterSpacing: "-0.02em",
-          color: C.white,
-        }}
-      >
-        WHAT SINS
+    <div style={{ position: "absolute", left: 64, top: 118 }}>
+      <Pill>Ibn al-Qayyim</Pill>
+      <div style={{ ...WORD, marginTop: 26, fontSize: 116 }}>
+        ONE MORE
         <br />
-        DO TO YOUR
-        <br />
-        <span style={{ color: C.goldSoft }}>HEART</span>
+        <span style={{ color: C.goldSoft }}>LOOK?</span>
       </div>
-    </div>
-
-    {/* the way back: covered → stained → polished */}
-    <div style={{ position: "absolute", left: 64, top: 548, display: "flex", alignItems: "center", gap: 18 }}>
-      {[
-        { spots: 0, full: true },
-        { spots: 12, full: false },
-        { spots: 0, full: false },
-      ].map((d, i) => (
-        <React.Fragment key={i}>
-          {i > 0 && (
-            <svg width={34} height={20} viewBox="0 0 34 20">
-              <path d="M2 10 H30 M22 3 L30 10 L22 17" stroke={C.goldSoft} strokeWidth={3.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
-          <div style={{ position: "relative", width: 76, height: 76 }}>
-            <Disc x={38} y={38} r={38} spots={d.spots} full={d.full} id={`th-s${i}`} />
-          </div>
-        </React.Fragment>
-      ))}
-      <div style={{ marginLeft: 14, fontFamily: F.ar, fontWeight: 700, fontSize: 40, color: C.mint, lineHeight: 1.6 }}>أستغفر الله</div>
+      <div style={{ marginTop: 34, fontFamily: F.ui, fontWeight: 600, fontSize: 40, color: "rgba(244,239,230,0.88)", letterSpacing: "-0.01em" }}>
+        What it does to your heart
+      </div>
     </div>
   </AbsoluteFill>
 );
+
+const Spot: React.FC = () => {
+  const c = { x: 1036, y: 360, r: 190 };
+  return (
+    <AbsoluteFill style={{ background: NIGHT, overflow: "hidden" }}>
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 50% 70% at 75% 50%, rgba(244,239,230,0.08), rgba(7,9,10,0) 70%)" }} />
+      <div style={{ position: "absolute", left: c.x - c.r - 14, top: c.y - c.r - 14, width: c.r * 2 + 28, height: c.r * 2 + 28, borderRadius: c.r + 14, border: "3px solid rgba(244,239,230,0.35)", boxSizing: "border-box" }} />
+      <div style={{ position: "absolute", left: c.x - c.r, top: c.y - c.r, width: c.r * 2, height: c.r * 2, borderRadius: c.r, background: C.paper, boxShadow: "0 40px 90px rgba(0,0,0,0.6)" }} />
+      {/* one sin: one black spot */}
+      <div style={{ position: "absolute", left: c.x - 58 - 30, top: c.y + 44 - 30, width: 60, height: 60, borderRadius: 30, background: C.ink }} />
+
+      <div style={{ position: "absolute", left: 64, top: 130 }}>
+        <Pill>The hadith of the black spot</Pill>
+        <div style={{ ...WORD, marginTop: 26, fontSize: 108 }}>
+          ONE SIN.
+          <br />
+          <span style={{ color: C.goldSoft }}>ONE SPOT.</span>
+        </div>
+        <div style={{ marginTop: 34, fontFamily: F.ui, fontWeight: 600, fontSize: 40, color: "rgba(244,239,230,0.88)", letterSpacing: "-0.01em" }}>
+          What sins do to your heart
+        </div>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+export const Thumb2: React.FC<{ variant: "look" | "spot" }> = ({ variant }) => (variant === "look" ? <Look /> : <Spot />);

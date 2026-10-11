@@ -2,7 +2,8 @@
 
 Files in this folder:
 - `Lesson2-What-Sins-Do-To-Your-Heart-1080p60.mp4`: the video (1920×1080, 60 fps, 1:04, −14 LUFS)
-- `thumbnail.png`: 1280×720 thumbnail
+- `thumbnail.png`: 1280×720 thumbnail ("One more look?", the 1:47 a.m. phone)
+- `thumbnail-alt.png`: alternative ("One sin. One spot."). Upload both with YouTube's Test & Compare and let it pick the winner
 - `captions-en.srt`: English captions (upload them; YouTube indexes captions for search)
 
 ## Title (pick one)
@@ -58,7 +59,7 @@ lowering the gaze, bilal ibn saad, deen, ummah
 ## Upload settings
 
 - Category: **Education**. Language: English. Caption language: English; upload `captions-en.srt`.
-- Thumbnail: `thumbnail.png`.
+- Thumbnail: `thumbnail.png` (or Test & Compare with `thumbnail-alt.png`).
 - Add it to the lesson playlist as Lesson 2, and use an end screen pointing to Lesson 1 and the playlist.
 - Publish in the evening (after Maghrib or ʿIshāʾ in your main time zone). The video is about the late-night
   scroll, so it lands when people are on their phones at night.

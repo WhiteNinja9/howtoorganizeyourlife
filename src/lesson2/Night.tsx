@@ -77,7 +77,7 @@ const Post2: React.FC<{ t: number }> = ({ t }) => (
   </div>
 );
 /** The sensitive post: never shown — only the platform's warning over a heavy blur. */
-const Post3: React.FC = () => (
+export const Post3: React.FC = () => (
   <div style={{ position: "absolute", inset: 0, background: "#1A1013", overflow: "hidden" }}>
     <div style={{ position: "absolute", inset: -60, background: "radial-gradient(ellipse at 45% 40%, #9A5A62, #5A2E38 45%, #1E1216 80%)", filter: "blur(36px)" }} />
     <div style={{ position: "absolute", inset: 0, background: "rgba(10,8,10,0.38)" }} />

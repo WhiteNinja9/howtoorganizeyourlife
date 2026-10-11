@@ -13,7 +13,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="Rise" component={Film} durationInFrames={TOTAL_FRAMES} fps={FPS} width={W} height={H} defaultProps={{ sfx: false }} />
     <Composition id="Lesson2" component={Film2} durationInFrames={TOTAL_FRAMES_2} fps={FPS} width={W} height={H} defaultProps={{ sfx: false }} />
     <Still id="Thumbnail" component={Thumbnail} width={1280} height={720} />
-    <Still id="Thumbnail2" component={Thumb2} width={1280} height={720} />
+    <Still id="Thumbnail2-look" component={Thumb2} width={1280} height={720} defaultProps={{ variant: "look" as const }} />
+    <Still id="Thumbnail2-spot" component={Thumb2} width={1280} height={720} defaultProps={{ variant: "spot" as const }} />
     <Still id="Banner" component={Banner} width={2560} height={1440} />
     <Still id="Pfp-ink" component={Pfp} width={800} height={800} defaultProps={{ variant: "ink" as const }} />
     <Still id="Pfp-emerald" component={Pfp} width={800} height={800} defaultProps={{ variant: "emerald" as const }} />
