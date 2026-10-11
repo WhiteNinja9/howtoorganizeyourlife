@@ -2,7 +2,7 @@
 
 1920×1080 @ 60 fps, 81.5 s, one continuous take that loops. Composition `Rise` (`src/Film.tsx`); all timing,
 camera keys and sound cues in `src/script.ts`. See `CLAUDE.md` for the house rules and motion playbook.
-Sound: `python3 scripts/sfx.py` (noise-only foley → `public/sfx.wav`), then render with `--props='{"sfx":true}'`.
+Sound: `python3 scripts/fetch_sfx.py` then `python3 scripts/sfx.py` (recorded non-tonal Mixkit foley → `public/sfx.wav`), then render with `--props='{"sfx":true}'`.
 
 <p align="center">
   <a href="https://github.com/remotion-dev/logo">

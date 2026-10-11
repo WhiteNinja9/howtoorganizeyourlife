@@ -49,6 +49,8 @@ Composition `Rise` in `src/Film.tsx`. All timing, texts, camera keys and sound c
 ## Commands
 
 - Measure label widths after editing `scripts/labels.json`: `python3 scripts/measure.py`
-- Sound: `python3 scripts/sfx.py` → `public/sfx.wav`
+- Sound: `python3 scripts/fetch_sfx.py` (once; Mixkit takes → `sfx/mixkit/`, git-ignored because the licence
+  forbids redistributing the raw files), then `python3 scripts/sfx.py` → `public/sfx.wav`. Takes per cue kind
+  live in `scripts/sfx_library.py`; every take was screened non-tonal (spectral peak prominence ≤ 12 dB).
 - Preview: `npx remotion render Rise out/rise-preview.mp4 --scale=0.5 --browser-executable=<headless_shell>`
   (in cloud sessions the headless shell is `/opt/pw-browsers/chromium_headless_shell-*/chrome-linux/headless_shell`)

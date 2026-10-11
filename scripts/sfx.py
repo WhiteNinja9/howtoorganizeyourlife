@@ -1,207 +1,143 @@
-"""Noise-only foley for the film (no music, nothing pitched), built from src/script.ts.
+"""Foley for the film from recorded, non-tonal Mixkit takes (no music, nothing pitched).
 
-python3 scripts/sfx.py  → public/sfx.wav (48 kHz stereo, −14 LUFS, ≤ −1 dBFS peak)
+python3 scripts/fetch_sfx.py   # once: downloads the takes into sfx/mixkit/
+python3 scripts/sfx.py         # → public/sfx.wav (48 kHz stereo, −14 LUFS, ≤ −1 dBFS)
 
-Every sound is filtered noise: whooshes, air, ticks, key taps, clicks, pops, thuds, paper,
-shimmer. Each generator returns (stereo, peak_index) and the peak lands exactly on its cue.
-Camera moves get an air whoosh sized by the move.
+- Cues come from src/script.ts (scripts/cues.ts), the same timeline the visuals use.
+- Each take is trimmed around its loudest instant and that instant lands exactly on the cue.
+- Takes rotate per kind with ±1.5 dB jitter; keystrokes are sliced from real typing sequences.
+- Whooshes travel across the stereo field (camera moves follow the move's direction); a short room
+  reverb glues the bus; the master is gained to −14 LUFS through a look-ahead limiter.
 """
 import json
 import math
+import os
 import subprocess
+import sys
 import wave
 
 import numpy as np
 import pyloudnorm as pyln
-from scipy.signal import butter, lfilter, sosfilt
+import soundfile as sf
+from scipy.ndimage import minimum_filter1d
+from scipy.signal import fftconvolve, find_peaks
 
+sys.path.insert(0, os.path.dirname(__file__))
+from sfx_library import LIB, TYPING_SEQUENCES  # noqa: E402
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+os.chdir(ROOT)
 SR = 48000
-rng = np.random.default_rng(7)
+rng = np.random.default_rng(11)
+
+# loudness of each kind (LUFS of the take on its own, ~400 ms window); transients sit lower so the
+# master limiter only shaves a little instead of flattening every click to the same peak
+KIND_DB = {"key": -27, "click": -25, "tick": -30, "pop": -26, "whoosh": -17, "air": -22, "swish": -24,
+           "thud": -16, "soft": -23, "paper": -28, "shimmer": -25}
+METER = pyln.Meter(SR, block_size=0.1)
+# longest slice kept after the peak (clicks: just the first transient)
+MAX_AFTER = {"key": 0.11, "click": 0.14, "tick": 0.12, "pop": 0.25}
+# where the peak lands relative to the cue (thuds hit when a flood/contraction is complete)
+PEAK_SHIFT = {"thud": 0.36}
+TRAVEL = {"whoosh", "air", "swish", "shimmer"}
 
 
-def noise(n):
-    return rng.standard_normal(n)
+def load(i):
+    x, sr = sf.read(f"sfx/mixkit/{i}.wav", always_2d=True)
+    assert sr == SR
+    return x
 
 
-def bp(x, lo, hi, order=2):
-    sos = butter(order, [lo / (SR / 2), min(hi, SR / 2 - 100) / (SR / 2)], btype="band", output="sos")
-    return sosfilt(sos, x)
+def envelope(x, ms=5):
+    m = np.abs(x).mean(axis=1)
+    n = max(1, int(ms / 1000 * SR))
+    return np.sqrt(np.convolve(m ** 2, np.ones(n) / n, "same"))
 
 
-def lp(x, f, order=2):
-    return sosfilt(butter(order, f / (SR / 2), output="sos"), x)
+def prep(x, kind):
+    """Trim around the loudest instant, fade the edges, normalise; return (take, peak index)."""
+    env = envelope(x)
+    pk = int(np.argmax(env))
+    thr = env[pk] * 0.02
+    on = pk
+    while on > 0 and env[on] > thr:
+        on -= 1
+    on = max(0, on - int(0.006 * SR))
+    off = pk
+    while off < len(env) - 1 and env[off] > thr:
+        off += 1
+    if kind in MAX_AFTER:
+        off = min(off, pk + int(MAX_AFTER[kind] * SR))
+    off = min(len(x), off + int(0.03 * SR))
+    y = x[on:off].copy()
+    fi = min(int(0.003 * SR), len(y) // 4)
+    fo = min(int(0.02 * SR), len(y) // 3)
+    y[:fi] *= np.linspace(0, 1, fi)[:, None]
+    y[-fo:] *= np.linspace(1, 0, fo)[:, None]
+    p = pk - on
+    # normalise to 0 LUFS (momentary, 100 ms blocks) so KIND_DB is a loudness target
+    pad = np.concatenate([y, np.zeros((max(0, int(0.4 * SR) - len(y)), 2))])
+    lufs = METER.integrated_loudness(pad)
+    if not np.isfinite(lufs):
+        lufs = 20 * math.log10(np.sqrt(np.mean(y ** 2)) + 1e-9)
+    return y * 10 ** ((0 - lufs) / 20), p
 
 
-def hp(x, f, order=2):
-    return sosfilt(butter(order, f / (SR / 2), btype="high", output="sos"), x)
+def keystrokes():
+    """Slice clean single keystrokes out of the typing sequences."""
+    out = []
+    for i in TYPING_SEQUENCES:
+        x = load(i)
+        env = envelope(x, 3)
+        peaks, props = find_peaks(env, height=env.max() * 0.25, distance=int(0.09 * SR))
+        for p in peaks:
+            pre = env[max(0, p - int(0.05 * SR)): p - int(0.008 * SR)]
+            if len(pre) and pre.max() > env[p] * 0.35:
+                continue  # another key right before — not clean
+            seg = x[max(0, p - int(0.03 * SR)): p + int(0.14 * SR)]
+            out.append(prep(seg, "key"))
+    out.sort(key=lambda tp: -np.max(np.abs(tp[0])))
+    return out[:18]
 
 
-def sweep_lp(x, f0, f1):
-    """One-pole low-pass whose cutoff glides f0 → f1 (block-wise, state carried)."""
-    out = np.empty_like(x)
-    zi = np.zeros(1)
-    blk = 256
-    nb = math.ceil(len(x) / blk)
-    for i in range(nb):
-        f = f0 * (f1 / f0) ** (i / max(1, nb - 1))
-        a = math.exp(-2 * math.pi * f / SR)
-        seg = x[i * blk:(i + 1) * blk]
-        y, zi = lfilter([1 - a], [1, -a], seg, zi=zi)
-        out[i * blk:(i + 1) * blk] = y
-    return out
+TAKES = {k: [prep(load(i), k) for i in ids] for k, ids in LIB.items()}
+TAKES["key"] = TAKES["key"] + keystrokes()
+counter = {k: int(rng.integers(0, 100)) for k in TAKES}
 
 
-def env_ar(n, peak, attack_pow=2.0, decay=6.0):
-    t = np.arange(n) / n
-    p = peak / n
-    e = np.where(t < p, (t / p) ** attack_pow, np.exp(-decay * (t - p) / (1 - p)))
-    return e
+def take(kind):
+    lst = TAKES[kind]
+    counter[kind] += 1
+    return lst[counter[kind] % len(lst)]
 
 
-def pan(mono, l2r=None, pos=0.0):
-    """Equal-power pan; l2r=(a, b) sweeps from a to b across the sound."""
-    n = len(mono)
-    if l2r is None:
-        p = np.full(n, pos)
-    else:
-        p = np.linspace(l2r[0], l2r[1], n)
+def travel(y, direction, amount=0.7):
+    """Mono-sum, then pan across the take with equal power."""
+    m = y.mean(axis=1)
+    p = np.linspace(-direction * amount, direction * amount, len(m))
     ang = (p + 1) * math.pi / 4
-    return np.stack([mono * np.cos(ang), mono * np.sin(ang)], axis=1)
+    return np.stack([m * np.cos(ang), m * np.sin(ang)], axis=1) * math.sqrt(2)
 
 
-def norm(x):
-    m = np.max(np.abs(x))
-    return x / m if m > 0 else x
+def nudge(y, pos):
+    ang = (pos + 1) * math.pi / 4
+    return y * np.array([math.cos(ang), math.sin(ang)]) * math.sqrt(2)
 
 
-# ---------------- generators: return (stereo float, peak index) ----------------
-
-def whoosh(dur=0.5, lo=300, hi=4500, peak=0.6, width=0.8):
-    n = int(dur * SR)
-    pk = int(peak * n)
-    x = noise(n)
-    rise = sweep_lp(x, lo, hi)
-    x = hp(rise, 120) * env_ar(n, pk, 2.2, 5.0)
-    return pan(norm(x), (-width, width)), pk
-
-
-def air(dur=0.8, size=1.0):
-    n = int(dur * SR)
-    pk = int(0.62 * n)
-    x = sweep_lp(noise(n), 250, 2200 + 1800 * size)
-    x = hp(x, 180) * env_ar(n, pk, 1.6, 4.0)
-    return pan(norm(x) * (0.5 + 0.5 * size), (-0.5, 0.5)), pk
-
-
-def tick(lo=2800, hi=7000, ms=5, decay_ms=7):
-    n = int(0.06 * SR)
-    x = bp(noise(n), lo, hi)
-    t = np.arange(n) / SR
-    e = np.exp(-t / (decay_ms / 1000)) * (t < ms / 1000 + 0.04)
-    return pan(norm(x * e), pos=rng.uniform(-0.15, 0.15)), 0
-
-
-def key():
-    a, _ = tick(1500, 4200, 4, 9)
-    n = len(a)
-    thump = lp(noise(n), 260) * np.exp(-np.arange(n) / SR / 0.012)
-    out = a + pan(norm(thump) * 0.35, pos=0)
-    return out, 0
-
-
-def click():
-    d, _ = tick(1800, 6000, 4, 6)
-    u, _ = tick(2600, 7500, 3, 5)
-    n = int(0.09 * SR)
-    out = np.zeros((n, 2))
-    out[: len(d)] += d
-    o = int(0.045 * SR)
-    out[o: o + len(u)] += u[: n - o] * 0.55
-    return out, 0
-
-
-def pop():
-    n = int(0.14 * SR)
-    t = np.arange(n) / SR
-    body = bp(noise(n), 500, 1800) * np.exp(-t / 0.022)
-    low = lp(noise(n), 300) * np.exp(-t / 0.03)
-    x = norm(body) + 0.6 * norm(low)
-    return pan(norm(x), pos=rng.uniform(-0.2, 0.2)), 0
-
-
-def thud():
-    n = int(0.45 * SR)
-    t = np.arange(n) / SR
-    sub = lp(noise(n), 140, 4) * np.exp(-t / 0.11)
-    mid = bp(noise(n), 350, 1100) * np.exp(-t / 0.035)
-    att = (t / 0.004).clip(0, 1)
-    x = (norm(sub) + 0.55 * norm(mid)) * att
-    return pan(norm(x), pos=0), int(0.004 * SR)
-
-
-def soft():
-    n = int(0.32 * SR)
-    pk = int(0.35 * n)
-    x = lp(noise(n), 900) * env_ar(n, pk, 1.5, 5.0)
-    return pan(norm(x), (-0.2, 0.2)), pk
-
-
-def swish():
-    return whoosh(0.26, 900, 7000, 0.55, 0.6)
-
-
-def shimmer(dur=0.9):
-    n = int(dur * SR)
-    t = np.arange(n) / SR
-    x = hp(noise(n), 6500, 4)
-    trem = 0.6 + 0.4 * np.sin(2 * math.pi * 17 * t + rng.uniform(0, 6))
-    e = env_ar(n, int(0.3 * n), 1.5, 4.0)
-    return pan(norm(x * trem * e), (-0.6, 0.6)), int(0.3 * n)
-
-
-def paper(dur=0.32):
-    n = int(dur * SR)
-    x = bp(noise(n), 1800, 7000)
-    crackle = (rng.random(n) < 0.004).astype(float)
-    crackle = lfilter([1], [1, -0.985], crackle)
-    e = env_ar(n, int(0.25 * n), 1.2, 3.5)
-    return pan(norm(x * (0.35 + crackle) * e), (0.3, -0.3)), int(0.25 * n)
-
-
-GEN = {
-    "whoosh": whoosh,
-    "air": air,
-    "tick": tick,
-    "key": key,
-    "click": click,
-    "pop": pop,
-    "thud": thud,
-    "soft": soft,
-    "swish": swish,
-    "shimmer": shimmer,
-    "paper": paper,
-}
-BASE_DB = {"whoosh": -8, "air": -12, "tick": -14, "key": -16, "click": -10, "pop": -10, "thud": -6, "soft": -12, "swish": -12, "shimmer": -18, "paper": -14}
-
-
-def reverb(x, secs=0.45, mix_db=-20):
+def reverb(x, secs=0.5, mix_db=-22):
     n = int(secs * SR)
     t = np.arange(n) / SR
-    ir = np.stack([noise(n), noise(n)], axis=1) * np.exp(-t / (secs / 5))[:, None]
+    ir = rng.standard_normal((n, 2)) * np.exp(-t / (secs / 5))[:, None]
+    ir[: int(0.012 * SR)] = 0  # pre-delay
     ir /= np.sqrt(np.sum(ir ** 2, axis=0))
-    from scipy.signal import fftconvolve
     wet = np.stack([fftconvolve(x[:, c], ir[:, c])[: len(x)] for c in range(2)], axis=1)
     return x + wet * 10 ** (mix_db / 20)
 
 
-def limit(x, ceiling_db=-1.0, look_ms=3, release_ms=80):
+def limit(x, ceiling_db=-1.0, look_ms=3, release_ms=60):
     ceil = 10 ** (ceiling_db / 20)
-    amp = np.max(np.abs(x), axis=1)
-    look = int(look_ms / 1000 * SR)
-    # required gain per sample, held over the look-ahead window
-    need = np.minimum(1.0, ceil / np.maximum(amp, 1e-9))
-    from scipy.ndimage import minimum_filter1d
-    need = minimum_filter1d(need, size=2 * look + 1)
+    need = np.minimum(1.0, ceil / np.maximum(np.max(np.abs(x), axis=1), 1e-9))
+    need = minimum_filter1d(need, size=2 * int(look_ms / 1000 * SR) + 1)
     g = np.empty_like(need)
     rel = math.exp(-1 / (release_ms / 1000 * SR))
     cur = 1.0
@@ -214,47 +150,57 @@ def limit(x, ceiling_db=-1.0, look_ms=3, release_ms=80):
 def main():
     data = json.loads(subprocess.check_output(["npx", "tsx", "scripts/cues.ts"], text=True))
     n = int(data["duration"] * SR)
-    bus = np.zeros((n + SR, 2))
+    bus = np.zeros((n + 2 * SR, 2))
 
-    def place(sig, pk, t, db):
+    def place(y, pk, t, db):
         start = int(round(t * SR)) - pk
         s0 = max(0, start)
-        sig = sig[s0 - start:]
-        e = min(len(bus), s0 + len(sig))
-        bus[s0:e] += sig[: e - s0] * 10 ** (db / 20)
+        y = y[s0 - start:]
+        e = min(len(bus), s0 + len(y))
+        bus[s0:e] += y[: e - s0] * 10 ** (db / 20)
 
+    side = 1
     for t, kind, *g in data["cues"]:
-        sig, pk = GEN[kind]()
-        place(sig, pk, t, BASE_DB[kind] + (g[0] if g else 0))
+        y, pk = take(kind)
+        if kind in TRAVEL:
+            side = -side
+            y = travel(y, side)
+        else:
+            y = nudge(y, float(rng.uniform(-0.15, 0.15)))
+        db = KIND_DB[kind] + (g[0] if g else 0) * 0.6 + float(rng.uniform(-1.5, 1.5))
+        place(y, pk, t + PEAK_SHIFT.get(kind, 0), db)
 
-    # camera moves → air whooshes sized by the move (skip cuts made under full cover)
+    # camera moves → air whooshes sized by the move, travelling with it (cuts under full cover skipped)
     cam = data["cam"]
+    airs = sorted(TAKES["air"], key=lambda tp: tp[1])
     for prev, k in zip(cam, cam[1:]):
-        t0, x, y, s = k[:4]
+        t0, x, y_, s = k[:4]
         dur = k[4] if len(k) > 4 else 0.8
         if dur < 0.1:
             continue
-        mag = abs(math.log(s / prev[3])) + math.hypot(x - prev[1], y - prev[2]) / 1400
+        dx = x - prev[1]
+        mag = abs(math.log(s / prev[3])) + math.hypot(dx, y_ - prev[2]) / 1400
         if mag < 0.06:
             continue
         size = min(1.0, mag / 0.6)
-        sig, pk = air(max(0.35, dur * 1.1), size)
-        place(sig, pk, t0 + dur * 0.62, -16 + 8 * size)
+        lead = dur * 0.62
+        y, pk = min(airs, key=lambda tp: abs(tp[1] / SR - lead))  # take whose build matches the glide
+        direction = -1 if dx > 40 else 1 if dx < -40 else (1 if s > prev[3] else -1)
+        place(travel(y, direction, 0.55 + 0.25 * size), pk, t0 + lead, KIND_DB["air"] - 7 + 7 * size)
 
     mix = reverb(bus[:n])
     meter = pyln.Meter(SR)
     for _ in range(3):
-        lufs = meter.integrated_loudness(mix)
-        mix = limit(mix * 10 ** ((-14 - lufs) / 20))
+        mix = limit(mix * 10 ** ((-14 - meter.integrated_loudness(mix)) / 20))
     lufs = meter.integrated_loudness(mix)
     peak = 20 * math.log10(np.max(np.abs(mix)))
-    pcm = (np.clip(mix, -1, 1) * 32767).astype("<i2")
     with wave.open("public/sfx.wav", "wb") as w:
         w.setnchannels(2)
         w.setsampwidth(2)
         w.setframerate(SR)
-        w.writeframes(pcm.tobytes())
-    print(f"public/sfx.wav  {data['duration']} s  {lufs:.1f} LUFS  peak {peak:.1f} dBFS  {len(data['cues'])} cues")
+        w.writeframes((np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
+    print(f"public/sfx.wav  {data['duration']} s  {lufs:.1f} LUFS  peak {peak:.1f} dBFS  "
+          f"{len(data['cues'])} cues  {sum(len(v) for v in TAKES.values())} takes")
 
 
 if __name__ == "__main__":
