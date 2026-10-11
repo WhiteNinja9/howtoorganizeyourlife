@@ -13,6 +13,29 @@ Files in this folder:
 Alternatives: **Anchored** (`@AnchoredDeen`), from the video's line "the prayers are the anchors", or **Daily Deen**.
 Check that the handle is free before you commit to it.
 
+## Channel description (YouTube Studio → Customization → Basic info, max 1,000 characters)
+
+```
+Rise. Short Islamic reminders to help Muslims organize their lives, one small deed at a time.
+
+Every video takes one idea from the Qur'an, the Sunnah and the scholars, and turns it into
+something you can do today: building your day around the five prayers, habits that last,
+guarding your time, and healing the heart, with lessons from scholars like Ibn al-Qayyim.
+
+Clean motion design. No music. Every verse and quote is sourced in the description.
+
+"Indeed, Allah will not change the condition of a people until they change what is within
+themselves." (Qur'an 13:11)
+
+The Ummah rises one person at a time. Subscribe and start with one small deed, in shāʾ Allāh.
+
+نهضة الأمة تبدأ منك: تذكيرات قصيرة لتنظيم حياتك حول الصلوات الخمس.
+```
+
+Keywords to add in Studio (Settings → Channel → Basic info → Keywords):
+islamic reminders, muslim productivity, organize your life islam, islamic motivation, ibn al qayyim,
+five daily prayers, muslim habits, quran reminders, deen, ummah
+
 ## Title (pick one)
 
 1. **How to Organize Your Life as a Muslim (Ibn al-Qayyim's Advice)** ← recommended: it targets the exact search people type
