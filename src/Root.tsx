@@ -1,9 +1,11 @@
-import { MyComposition } from "./Composition";
+import { Composition } from "remotion";
+import { Film } from "./Film";
+import { FPS, H, W } from "./lib/anim";
+import { T } from "./timeline";
+import "./lib/theme";
 
 export const RemotionRoot: React.FC = () => {
   return (
-    <>
-      <MyComposition />
-    </>
+    <Composition id="Rise" component={Film} durationInFrames={T.end} fps={FPS} width={W} height={H} />
   );
 };

@@ -1,6 +1,6 @@
 # How to Organize Your Life — Remotion video
 
-Landscape 1920×1080 @ 60 fps. Main composition: `MyComp` in `src/Composition.tsx`.
+Landscape 1920×1080 @ 60 fps, 71 s. Composition `Rise` (`src/Film.tsx`), scenes in `src/scenes/`, timing in `src/timeline.ts` (120 BPM beat grid). Quotes verified against al-Maktaba al-Shamela. Label widths: `python3 scripts/measure.py` after editing `scripts/labels.json`.
 
 <p align="center">
   <a href="https://github.com/remotion-dev/logo">
