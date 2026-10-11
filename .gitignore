@@ -9,3 +9,4 @@ public/sfx.wav
 # Mixkit sound files: free for commercial use, but not to be redistributed — fetch with scripts/fetch_sfx.py
 sfx/mixkit/
 __pycache__/
+public/sfx-*.wav

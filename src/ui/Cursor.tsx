@@ -22,7 +22,9 @@ export const Cursor: React.FC<{
   show: [number, number];
   clicks?: number[];
   hovers?: [number, number][];
-}> = ({ t, keys, show, clicks = [], hovers = [] }) => {
+  /** long-presses: held down between the two times */
+  holds?: [number, number][];
+}> = ({ t, keys, show, clicks = [], hovers = [], holds = [] }) => {
   if (t < show[0] || t > show[1] + 0.4) return null;
   const p = pos(t, keys);
   const dt = 1 / 120;
@@ -42,6 +44,7 @@ export const Cursor: React.FC<{
   }
   let press = 0;
   for (const c of clicks) press += sp(t, c - 0.06, { w: 60, z: 1 }) - sp(t, c + 0.05, { w: 26, z: 0.8 });
+  for (const [h0, h1] of holds) press += sp(t, h0 - 0.06, { w: 40, z: 1 }) - sp(t, h1, { w: 26, z: 0.8 });
   const hover = multi(
     t,
     0,

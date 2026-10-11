@@ -35,7 +35,7 @@ const fonts = [
   loadFont({ family: F.ar, url: staticFile("fonts/plex-400.woff2"), weight: "400" }),
   loadFont({ family: F.ar, url: staticFile("fonts/plex-600.woff2"), weight: "600" }),
   loadFont({ family: F.ar, url: staticFile("fonts/plex-700.woff2"), weight: "700" }),
-  ...[64, 250].map((p) => loadFont({ family: `QCF_P${p}`, url: staticFile(`fonts/qcf-p${p}.woff2`), weight: "400" })),
+  ...[64, 250, 464, 588].map((p) => loadFont({ family: `QCF_P${p}`, url: staticFile(`fonts/qcf-p${p}.woff2`), weight: "400" })),
 ];
 
 export const fontsReady = Promise.all(fonts);

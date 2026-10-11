@@ -1,6 +1,6 @@
 # Rise — Remotion film (landscape 1920×1080, 60 fps)
 
-Composition `Rise` in `src/Film.tsx`. All timing, texts, camera keys and sound cues live in `src/script.ts`
+Compositions: `Rise` (lesson 1, `src/Film.tsx`) and `Lesson2` (`src/lesson2/`); stills `Thumbnail`, `Banner`, `Pfp-*`. All timing, texts, camera keys and sound cues live in `src/script.ts`
 (pure data, imported by `scripts/sfx.py` through `scripts/cues.ts`).
 
 ## House rules (from the owner's standing feedback — always apply)
@@ -35,6 +35,10 @@ Composition `Rise` in `src/Film.tsx`. All timing, texts, camera keys and sound c
 - Dark → light colour changes: never lerp (muddy grey); dissolve an overlay of the old colour outward from
   the focal point with a radial mask.
 - Goo (blur + alpha threshold `0 0 0 22 -9`) only during splits/merges; labels on a separate layer.
+- Every SVG filter needs `colorInterpolationFilters="sRGB"` (the linearRGB default shifts colours a few levels
+  the moment the filter switches on — a visible one-frame pop).
+- First-person blinks: `src/ui/Lids.tsx` (lens-shaped lids, soft edges, vignette only while half-open). Lids, the
+  flood and the scene behind closed eyes share one black (`NIGHT`) so blinks never pop.
 - Cursor drives every change: glide paths that arrive just before the beat, faces its direction of travel,
   grows on hover, presses at 0.85.
 - Counters swap whole values with every digit in a fixed-width slot.

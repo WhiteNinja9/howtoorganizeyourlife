@@ -1,7 +1,7 @@
 """Foley for the film from recorded, non-tonal Mixkit takes (no music, nothing pitched).
 
 python3 scripts/fetch_sfx.py   # once: downloads the takes into sfx/mixkit/
-python3 scripts/sfx.py         # → public/sfx.wav (48 kHz stereo, −14 LUFS, ≤ −1 dBFS)
+python3 scripts/sfx.py [film]  # rise → public/sfx.wav, lesson2 → public/sfx-lesson2.wav (48 kHz, −14 LUFS)
 
 - Cues come from src/script.ts (scripts/cues.ts), the same timeline the visuals use.
 - Each take is trimmed around its loudest instant and that instant lands exactly on the cue.
@@ -148,7 +148,9 @@ def limit(x, ceiling_db=-1.0, look_ms=3, release_ms=60):
 
 
 def main():
-    data = json.loads(subprocess.check_output(["npx", "tsx", "scripts/cues.ts"], text=True))
+    film = sys.argv[1] if len(sys.argv) > 1 else "rise"
+    out = "public/sfx.wav" if film == "rise" else f"public/sfx-{film}.wav"
+    data = json.loads(subprocess.check_output(["npx", "tsx", "scripts/cues.ts", film], text=True))
     n = int(data["duration"] * SR)
     bus = np.zeros((n + 2 * SR, 2))
 
@@ -194,12 +196,12 @@ def main():
         mix = limit(mix * 10 ** ((-14 - meter.integrated_loudness(mix)) / 20))
     lufs = meter.integrated_loudness(mix)
     peak = 20 * math.log10(np.max(np.abs(mix)))
-    with wave.open("public/sfx.wav", "wb") as w:
+    with wave.open(out, "wb") as w:
         w.setnchannels(2)
         w.setsampwidth(2)
         w.setframerate(SR)
         w.writeframes((np.clip(mix, -1, 1) * 32767).astype("<i2").tobytes())
-    print(f"public/sfx.wav  {data['duration']} s  {lufs:.1f} LUFS  peak {peak:.1f} dBFS  "
+    print(f"{out}  {data['duration']} s  {lufs:.1f} LUFS  peak {peak:.1f} dBFS  "
           f"{len(data['cues'])} cues  {sum(len(v) for v in TAKES.values())} takes")
 
 
