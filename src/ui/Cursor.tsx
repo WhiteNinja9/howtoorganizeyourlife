@@ -1,45 +1,72 @@
 import React from "react";
-import { multi, sp } from "../lib/anim";
+import { clamp01, exitK, glideKeys, multi, sp } from "../lib/motion";
 
-export type CursorKey = { f: number; x: number; y: number };
+/** [t, x, y, glideSeconds] — the cursor arrives at (x, y) at t + glide. */
+export type CurKey = [number, number, number, number?];
 
-const MOVE = { damping: 24, stiffness: 120, mass: 1 };
+const pos = (t: number, keys: CurKey[]) => {
+  const [first, ...rest] = keys;
+  return {
+    x: glideKeys(t, first[1], rest.map(([t0, x, , d]) => [t0, x, d ?? 0.55])),
+    y: glideKeys(t, first[2], rest.map(([t0, , y, d]) => [t0, y, d ?? 0.55])),
+  };
+};
 
 /**
- * A macOS-style arrow driven by keyframes (one spring per move) with real clicks:
- * each click dips the cursor to 82% and springs back. `zoom` scales it with the camera.
+ * World-space macOS arrow. Glides between keys, turns to face its direction of travel,
+ * grows on hover, presses to 0.85. Lives inside the camera so it scales with it.
  */
 export const Cursor: React.FC<{
-  frame: number;
-  keys: CursorKey[];
-  clicks?: number[];
+  t: number;
+  keys: CurKey[];
   show: [number, number];
-}> = ({ frame, keys, clicks = [], show }) => {
-  if (frame < show[0] || frame > show[1] || keys.length === 0) return null;
-  const [k0, ...rest] = keys;
-  const x = multi(frame, k0.x, rest.map((k) => [k.f, k.x]), MOVE);
-  const y = multi(frame, k0.y, rest.map((k) => [k.f, k.y]), MOVE);
-  let press = 0;
-  for (const c of clicks) {
-    const down = sp(frame, c - 4, { damping: 30, stiffness: 600 });
-    const up = sp(frame, c + 3, { damping: 18, stiffness: 300 });
-    press += down - up;
+  clicks?: number[];
+  hovers?: [number, number][];
+}> = ({ t, keys, show, clicks = [], hovers = [] }) => {
+  if (t < show[0] || t > show[1] + 0.4) return null;
+  const p = pos(t, keys);
+  const dt = 1 / 120;
+  const a = pos(t - dt, keys);
+  const b = pos(t + dt, keys);
+  const vx = (b.x - a.x) / (2 * dt);
+  const vy = (b.y - a.y) / (2 * dt);
+  const speed = Math.hypot(vx, vy);
+  // the arrow's tip points up-left (~ -112° from +x); lean it toward the travel direction
+  let rot = 0;
+  if (speed > 40) {
+    const heading = (Math.atan2(vy, vx) * 180) / Math.PI;
+    let d = heading - -112;
+    while (d > 180) d -= 360;
+    while (d < -180) d += 360;
+    rot = Math.max(-34, Math.min(34, d * 0.35)) * clamp01(speed / 1600);
   }
-  const appear = sp(frame, show[0], { damping: 22, stiffness: 260 }) * (1 - sp(frame, show[1] - 12, { damping: 26, stiffness: 300 }));
-  const s = appear * (1 - 0.18 * press);
+  let press = 0;
+  for (const c of clicks) press += sp(t, c - 0.06, { w: 60, z: 1 }) - sp(t, c + 0.05, { w: 26, z: 0.8 });
+  const hover = multi(
+    t,
+    0,
+    hovers.flatMap(([h0, h1]) => [
+      [h0, 1],
+      [h1, 0],
+    ]) as [number, number][],
+    { w: 18, z: 0.85 },
+  );
+  const appear = sp(t, show[0], { w: 20, z: 0.9 }) * (1 - exitK(t, show[1], 0.3).off);
+  const s = appear * (1 + 0.14 * hover) * (1 - 0.15 * press);
+  if (s < 0.003) return null;
   return (
     <svg
-      width={44}
-      height={54}
+      width={40}
+      height={49}
       viewBox="0 0 32 39"
       style={{
         position: "absolute",
-        left: x,
-        top: y,
-        transform: `translate(-3px,-2px) scale(${s})`,
+        left: p.x,
+        top: p.y,
+        transform: `translate(-3px,-2px) rotate(${rot}deg) scale(${s})`,
         transformOrigin: "3px 2px",
         overflow: "visible",
-        filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.25))",
+        filter: "drop-shadow(0 5px 7px rgba(0,0,0,0.22))",
         zIndex: 100,
       }}
     >

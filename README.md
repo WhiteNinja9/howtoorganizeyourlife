@@ -1,6 +1,8 @@
-# How to Organize Your Life — Remotion video
+# Rise — a reminder for the Ummah (Remotion)
 
-Landscape 1920×1080 @ 60 fps, 71 s. Composition `Rise` (`src/Film.tsx`), scenes in `src/scenes/`, timing in `src/timeline.ts` (120 BPM beat grid). Quotes verified against al-Maktaba al-Shamela. Label widths: `python3 scripts/measure.py` after editing `scripts/labels.json`.
+1920×1080 @ 60 fps, 81.5 s, one continuous take that loops. Composition `Rise` (`src/Film.tsx`); all timing,
+camera keys and sound cues in `src/script.ts`. See `CLAUDE.md` for the house rules and motion playbook.
+Sound: `python3 scripts/sfx.py` (noise-only foley → `public/sfx.wav`), then render with `--props='{"sfx":true}'`.
 
 <p align="center">
   <a href="https://github.com/remotion-dev/logo">

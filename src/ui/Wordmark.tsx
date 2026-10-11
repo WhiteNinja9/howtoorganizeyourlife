@@ -1,14 +1,13 @@
 import React from "react";
 import { C, F } from "../lib/theme";
-import { clamp01, lerp, Rect } from "../lib/anim";
+import { clamp01, lerp, Rect } from "../lib/motion";
 
 /**
- * "Rise." in Archivo 800, wdth 125, at 240px. Metrics measured with fontTools
- * (scripts/measure.py notes): "Rise" advance = 2.737em at wdth 125, 1.501em at wdth 62;
- * the period's advance = 0.349em, its ink = x 0.066–0.284em, height 0.183em.
- *
- * squeeze p: 0 = full word, 1 = only the dot, centred.
- * First half narrows the wdth axis (letters stay touching), second half scales the rest.
+ * "Rise." in Archivo 800 / wdth 125 at 240px (metrics measured with fontTools):
+ * "Rise" advance 2.737em at wdth 125 → 1.501em at wdth 62; period advance 0.349em,
+ * its ink x 0.066–0.284em, height 0.183em.
+ * squeeze p: 0 = full word, 1 = only the dot, centred. The first half narrows the wdth axis
+ * (letters keep touching, each moves toward the dot by the same factor), the second half scales.
  */
 const SIZE = 240;
 const RISE_W125 = 2.737 * SIZE;
@@ -32,13 +31,7 @@ export const wordmarkGeom = (p: number) => {
     riseW = RISE_W62 * scale;
   }
   const origin = 960 + riseW / 2 - DOT_ADV / 2;
-  const dot: Rect = {
-    x: origin + 0.066 * SIZE,
-    y: BASELINE - 0.183 * SIZE,
-    w: 0.218 * SIZE,
-    h: 0.183 * SIZE,
-    r: 8,
-  };
+  const dot: Rect = { x: origin + 0.066 * SIZE, y: BASELINE - 0.183 * SIZE, w: 0.218 * SIZE, h: 0.183 * SIZE, r: 8 };
   return { wdth, scale, origin, dot };
 };
 
@@ -46,7 +39,7 @@ export const WordmarkLetters: React.FC<{ p: number }> = ({ p }) => {
   const g = wordmarkGeom(p);
   if (g.scale < 0.002) return null;
   return (
-    <svg width={1920} height={1080} style={{ position: "absolute", inset: 0 }}>
+    <svg width={1920} height={1080} style={{ position: "absolute", left: 0, top: 0, overflow: "visible" }}>
       <text
         x={g.origin}
         y={BASELINE}
@@ -57,7 +50,7 @@ export const WordmarkLetters: React.FC<{ p: number }> = ({ p }) => {
           fontFamily: F.word,
           fontSize: SIZE,
           fontWeight: 800,
-          fontVariationSettings: `'wdth' ${g.wdth.toFixed(2)}, 'wght' 800`,
+          fontVariationSettings: `'wdth' ${g.wdth.toFixed(3)}, 'wght' 800`,
         }}
       >
         Rise

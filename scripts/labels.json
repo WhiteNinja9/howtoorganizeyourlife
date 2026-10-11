@@ -1,15 +1,105 @@
 [
  [
-  "Amiri",
-  700,
-  64,
-  "بِسْمِ اللَّهِ"
+  "Geist",
+  500,
+  36,
+  "How do I organize my life?"
  ],
  [
   "Geist",
   600,
-  56,
-  "For the Ummah"
+  30,
+  "Enjoin what is right"
+ ],
+ [
+  "Geist",
+  600,
+  30,
+  "Forbid what is wrong"
+ ],
+ [
+  "Geist",
+  600,
+  30,
+  "Believe in Allah"
+ ],
+ [
+  "Geist",
+  600,
+  40,
+  "That is what makes us the best."
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "خَطْرَة"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "a passing thought"
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "فِكْرَة"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "a thought you dwell on"
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "شَهْوَة"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "a desire"
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "عَزِيمَة"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "resolve"
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "فِعْل"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "an action"
+ ],
+ [
+  "Plex",
+  700,
+  58,
+  "عَادَة"
+ ],
+ [
+  "Geist",
+  500,
+  32,
+  "a habit"
  ],
  [
   "Geist",
@@ -24,93 +114,9 @@
   "One small deed at a time."
  ],
  [
-  "Amiri",
+  "Plex",
   700,
-  64,
-  "إِنْ شَاءَ اللَّهُ"
- ],
- [
-  "Geist",
-  600,
-  46,
-  "Look at what you already do."
- ],
- [
-  "Geist",
-  600,
-  46,
-  "You were made for discipline."
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "خَطْرَة"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "a passing thought"
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "فِكْرَة"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "a thought you dwell on"
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "شَهْوَة"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "a desire"
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "عَزِيمَة"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "resolve"
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "فِعْل"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "an action"
- ],
- [
-  "Amiri",
-  700,
-  62,
-  "عَادَة"
- ],
- [
-  "Geist",
-  500,
-  32,
-  "a habit"
+  60,
+  "إن شاء الله"
  ]
 ]

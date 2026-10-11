@@ -1,41 +1,39 @@
 import React from "react";
-import { AbsoluteFill } from "remotion";
-import { b, cRect, FLOOD, floodRect, FULL, multi, POP, Rect, rectLerp, sp, SOFT } from "../lib/anim";
 import { C, F } from "../lib/theme";
-import { Mono, Rise, Shape, tw } from "../ui/primitives";
+import { cRect, flood, gl, lerp, POP, Rect, rectLerp, sp, SOFT, TINY, tq } from "../lib/motion";
+import { Digits, Mono, Rise, Shape, Words } from "../ui/kit";
 import { Cursor } from "../ui/Cursor";
-import { Hud } from "../ui/Hud";
-import { Sfx, T } from "../timeline";
+import { T, TILES } from "../script";
+import { MERGED } from "./Ask";
 
-const s = (beats: number) => T.bento + b(beats);
-
-const H1 = "Look at what you already do.";
-const H2 = "You were made for discipline.";
-const HEAD_Y = 168;
-
-type Tile = { key: string; rect: Rect; bg: string; at: number };
+type Key = keyof typeof TILES;
 const R = 34;
-const tiles: Tile[] = [
-  { key: "salah", rect: { x: 160, y: 300, w: 640, h: 320, r: R }, bg: C.ink, at: s(2) },
-  { key: "fajr", rect: { x: 824, y: 300, w: 420, h: 320, r: R }, bg: C.white, at: s(3) },
-  { key: "sawm", rect: { x: 1268, y: 300, w: 492, h: 320, r: R }, bg: C.emerald, at: s(4) },
-  { key: "qiblah", rect: { x: 160, y: 644, w: 420, h: 320, r: R }, bg: C.white, at: s(5) },
-  { key: "zakat", rect: { x: 604, y: 644, w: 640, h: 320, r: R }, bg: C.gold, at: s(6) },
-  { key: "jumuah", rect: { x: 1268, y: 644, w: 492, h: 320, r: R }, bg: C.paper2, at: s(7) },
+const rectOf = (k: Key): Rect => ({ ...TILES[k], r: R });
+const BG: Record<Key, string> = {
+  salah: C.ink,
+  fajr: C.white,
+  sawm: C.emerald,
+  qiblah: C.white,
+  zakat: C.gold,
+  jumuah: C.paper2,
+};
+/** unfold order: [tile, delay, edge it unfolds from] */
+const UNFOLD: [Key, number, "left" | "top"][] = [
+  ["fajr", 0, "left"],
+  ["qiblah", 0.08, "top"],
+  ["zakat", 0.2, "top"],
+  ["sawm", 0.22, "left"],
+  ["jumuah", 0.36, "top"],
 ];
-const SAWM = tiles[2].rect;
-const SAWM_C = { x: SAWM.x + SAWM.w / 2, y: SAWM.y + SAWM.h / 2 };
-const CLICK = s(13.5);
-const FLOOD_AT = s(14);
-
-export const BENTO_SFX: Sfx[] = [
-  { f: s(0), kind: "contract" },
-  { f: s(1), kind: "rise" },
-  ...tiles.map((t) => ({ f: t.at, kind: "pop" as const })),
-  { f: s(10), kind: "swap" },
-  { f: CLICK, kind: "click" },
-  { f: FLOOD_AT, kind: "flood" },
-];
+const VISIT: Record<Key, number> = {
+  salah: T.bento + 0.9,
+  fajr: T.tour[0],
+  sawm: T.tour[1],
+  qiblah: T.tour[2],
+  zakat: T.tour[3],
+  jumuah: T.tour[4],
+};
+export const FLOOD_DUR = 0.38;
 
 const big = (color: string, size = 190): React.CSSProperties => ({
   fontFamily: F.word,
@@ -46,269 +44,226 @@ const big = (color: string, size = 190): React.CSSProperties => ({
   color,
   letterSpacing: "-0.02em",
 });
-const title = (color: string): React.CSSProperties => ({ fontFamily: F.ui, fontWeight: 600, fontSize: 42, color, lineHeight: 1.1 });
-const sub = (color: string): React.CSSProperties => ({ fontFamily: F.ui, fontWeight: 400, fontSize: 27, color, lineHeight: 1.3 });
+const title = (color: string): React.CSSProperties => ({ fontFamily: F.ui, fontWeight: 600, fontSize: 42, color, lineHeight: 1.1, whiteSpace: "nowrap" });
+const sub = (color: string): React.CSSProperties => ({ fontFamily: F.ui, fontSize: 27, color, lineHeight: 1.3, whiteSpace: "nowrap" });
 
-const TileBody: React.FC<{ t: Tile; frame: number }> = ({ t, frame }) => {
-  const a = t.at + 8;
-  const pad: React.CSSProperties = { position: "absolute", inset: 0, padding: 36 };
-  const tag = (txt: string, color: string) => (
-    <div style={{ position: "absolute", right: 34, top: 34 }}>
-      <Rise frame={frame} at={a}>
-        <Mono color={color} size={17}>{txt}</Mono>
-      </Rise>
-    </div>
-  );
-  switch (t.key) {
-    case "salah": {
+const Tag: React.FC<{ t: number; at: number; color: string; children: string }> = ({ t, at, color, children }) => (
+  <div style={{ position: "absolute", right: 34, top: 32 }}>
+    <Rise t={t} at={at}>
+      <Mono color={color} size={17}>{children}</Mono>
+    </Rise>
+  </div>
+);
+const Bottom: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div style={{ position: "absolute", left: 36, bottom: 34, right: 36 }}>{children}</div>
+);
+
+const TileBody: React.FC<{ k: Key; t: number; a: number }> = ({ k, t, a }) => {
+  const v = VISIT[k];
+  switch (k) {
+    case "salah":
       return (
-        <div style={pad}>
-          {tag("Salah", "#8E9792")}
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 26 }}>
-            <Rise frame={frame} at={a}>
+        <>
+          <Tag t={t} at={a} color="#8E9792">Salah</Tag>
+          <div style={{ position: "absolute", left: 36, top: 40, display: "flex", alignItems: "flex-end", gap: 26 }}>
+            <Rise t={t} at={a}>
               <span style={big(C.white, 200)}>5</span>
             </Rise>
-            <div style={{ paddingBottom: 12 }}>
-              <Rise frame={frame} at={a + 3}>
+            <div style={{ paddingBottom: 14 }}>
+              <Rise t={t} at={a + 0.06}>
                 <div style={title(C.white)}>prayers.</div>
               </Rise>
               <br />
-              <Rise frame={frame} at={a + 5}>
+              <Rise t={t} at={a + 0.12}>
                 <div style={sub("#A9B0AC")}>Every single day.</div>
               </Rise>
             </div>
           </div>
           <div style={{ position: "absolute", left: 36, bottom: 36, display: "flex", gap: 14 }}>
-            {[0, 1, 2, 3, 4].map((i) => {
-              const fill = sp(frame, a + 10 + i * 5, POP);
-              return (
-                <div key={i} style={{ width: 30, height: 30, borderRadius: 15, border: "2px solid #4A5450", position: "relative" }}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 3,
-                      borderRadius: 12,
-                      background: C.mint,
-                      transform: `scale(${fill})`,
-                    }}
-                  />
-                </div>
-              );
-            })}
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ width: 30, height: 30, borderRadius: 15, border: "2px solid #4A5450", position: "relative", transform: `scale(${sp(t, a + 0.1 + i * 0.03, POP)})` }}>
+                <div style={{ position: "absolute", inset: 3, borderRadius: 12, background: C.mint, transform: `scale(${sp(t, v + i * 0.15, POP)})` }} />
+              </div>
+            ))}
           </div>
-        </div>
+        </>
       );
-    }
     case "fajr": {
-      const k = sp(frame, a, SOFT);
+      const sun = sp(t, v, { w: 7, z: 1 });
       return (
-        <div style={pad}>
-          {tag("Dawn", C.muted)}
-          <svg width={120} height={70} viewBox="0 0 120 70" style={{ overflow: "visible" }}>
-            <line x1={0} y1={60} x2={120 * k} y2={60} stroke={C.ink} strokeWidth={4} strokeLinecap="round" />
-            <path d={`M 28 60 A 32 32 0 0 1 92 60`} stroke={C.gold} strokeWidth={4} fill="none" strokeDasharray={101} strokeDashoffset={101 * (1 - k)} />
-            {[-60, -30, 0, 30, 60].map((deg, i) => {
-              const kk = sp(frame, a + 6 + i * 2, POP);
-              const r1 = 42, r2 = 42 + 12 * kk;
-              const rad = ((deg - 90) * Math.PI) / 180;
-              return (
-                <line key={deg} x1={60 + r1 * Math.cos(rad)} y1={60 + r1 * Math.sin(rad)} x2={60 + r2 * Math.cos(rad)} y2={60 + r2 * Math.sin(rad)} stroke={C.gold} strokeWidth={4} strokeLinecap="round" />
-              );
-            })}
-          </svg>
-          <div style={{ position: "absolute", left: 36, bottom: 36 }}>
-            <Rise frame={frame} at={a + 2}>
-              <div style={title(C.ink)}>Fajr</div>
-            </Rise>
-            <br />
-            <Rise frame={frame} at={a + 4}>
-              <div style={sub(C.muted)}>You rise before the sun.</div>
-            </Rise>
+        <>
+          <Tag t={t} at={a} color={C.muted}>Dawn</Tag>
+          <div style={{ position: "absolute", left: 36, top: 44, width: 150, height: 80, overflow: "hidden" }}>
+            <svg width={150} height={80} viewBox="0 0 150 80">
+              <g transform={`translate(0 ${(1 - sun) * 46})`}>
+                <circle cx={75} cy={74} r={30} fill={C.gold} />
+              </g>
+              {[-60, -30, 0, 30, 60].map((deg, i) => {
+                const kk = sp(t, v + 0.25 + i * 0.05, POP);
+                const rad = ((deg - 90) * Math.PI) / 180;
+                return (
+                  <line key={deg} x1={75 + 40 * Math.cos(rad)} y1={74 + 40 * Math.sin(rad)} x2={75 + (40 + 14 * kk) * Math.cos(rad)} y2={74 + (40 + 14 * kk) * Math.sin(rad)} stroke={C.gold} strokeWidth={4} strokeLinecap="round" opacity={kk > 0.01 ? 1 : 0} />
+                );
+              })}
+            </svg>
           </div>
-        </div>
+          <div style={{ position: "absolute", left: 36, top: 122, width: 150, height: 4, borderRadius: 2, background: C.ink }} />
+          <Bottom>
+            <Rise t={t} at={a + 0.05}><div style={title(C.ink)}>Fajr</div></Rise>
+            <br />
+            <Rise t={t} at={a + 0.1}><div style={sub(C.muted)}>You rise before the sun.</div></Rise>
+          </Bottom>
+        </>
       );
     }
-    case "sawm":
+    case "sawm": {
+      const c = Math.round(lerp(1, 30, sp(tq(t), v, { w: 7.5, z: 1 })));
       return (
-        <div style={pad}>
-          {tag("Sawm", "rgba(255,253,248,0.6)")}
-          <Rise frame={frame} at={a}>
-            <span style={big(C.paper, 190)}>30</span>
-          </Rise>
-          <div style={{ position: "absolute", left: 36, bottom: 36 }}>
-            <Rise frame={frame} at={a + 3}>
-              <div style={title(C.white)}>days of fasting,</div>
-            </Rise>
-            <br />
-            <Rise frame={frame} at={a + 5}>
-              <div style={sub("rgba(255,253,248,0.75)")}>every single year.</div>
-            </Rise>
+        <>
+          <Tag t={t} at={a} color="rgba(255,253,248,0.6)">Sawm</Tag>
+          <div style={{ position: "absolute", left: 36, top: 40 }}>
+            {t >= v && <Digits value={String(c).padStart(2, " ")} slot={120} style={big(C.paper, 180)} />}
           </div>
-        </div>
+          <Bottom>
+            <Rise t={t} at={a + 0.05}><div style={title(C.white)}>days of fasting,</div></Rise>
+            <br />
+            <Rise t={t} at={a + 0.1}><div style={sub("rgba(255,253,248,0.75)")}>every single year.</div></Rise>
+          </Bottom>
+        </>
       );
+    }
     case "qiblah": {
-      const ang = multi(frame, -120, [[a + 4, 38]], { damping: 12, stiffness: 90 });
-      const ring = sp(frame, a, SOFT);
+      const ang = lerp(-140, 38, sp(t, v, { w: 9, z: 0.55 }));
       return (
-        <div style={pad}>
-          {tag("Qiblah", C.muted)}
-          <svg width={96} height={96} viewBox="-48 -48 96 96">
-            <circle r={42} stroke={C.ink} strokeWidth={3} fill="none" strokeDasharray={264} strokeDashoffset={264 * (1 - ring)} />
+        <>
+          <Tag t={t} at={a} color={C.muted}>Qiblah</Tag>
+          <svg width={110} height={110} viewBox="-55 -55 110 110" style={{ position: "absolute", left: 36, top: 30 }}>
+            <circle r={48} stroke={C.ink} strokeWidth={3} fill="none" />
+            {[0, 90, 180, 270].map((d) => (
+              <line key={d} x1={0} y1={-48} x2={0} y2={-40} stroke={C.ink} strokeWidth={3} transform={`rotate(${d})`} />
+            ))}
             <g transform={`rotate(${ang})`}>
-              <path d="M0 -32 L7 0 L0 6 L-7 0 Z" fill={C.emerald} />
-              <path d="M0 32 L7 0 L0 -6 L-7 0 Z" fill={C.line} />
+              <path d="M0 -36 L8 0 L0 7 L-8 0 Z" fill={C.emerald} />
+              <path d="M0 36 L8 0 L0 -7 L-8 0 Z" fill={C.line} />
             </g>
-            <circle r={4} fill={C.ink} />
+            <circle r={4.5} fill={C.ink} />
           </svg>
-          <div style={{ position: "absolute", left: 36, bottom: 36, right: 36 }}>
-            <Rise frame={frame} at={a + 2}>
-              <div style={title(C.ink)}>One Qiblah</div>
-            </Rise>
+          <Bottom>
+            <Rise t={t} at={a + 0.05}><div style={title(C.ink)}>One Qiblah</div></Rise>
             <br />
-            <Rise frame={frame} at={a + 4}>
-              <div style={sub(C.muted)}>Nearly 2 billion hearts,</div>
-            </Rise>
+            <Rise t={t} at={a + 0.1}><div style={sub(C.muted)}>Nearly 2 billion hearts,</div></Rise>
             <br />
-            <Rise frame={frame} at={a + 5}>
-              <div style={sub(C.muted)}>one direction.</div>
-            </Rise>
-          </div>
-        </div>
+            <Rise t={t} at={a + 0.14}><div style={sub(C.muted)}>one direction.</div></Rise>
+          </Bottom>
+        </>
       );
     }
-    case "zakat":
+    case "zakat": {
+      const z = lerp(0, 2.5, sp(tq(t), v, { w: 7.5, z: 1 }));
+      const bar = sp(t, v + 0.1, SOFT);
       return (
-        <div style={pad}>
-          {tag("Zakat", "rgba(13,21,18,0.55)")}
-          <Rise frame={frame} at={a}>
-            <span style={big(C.ink, 170)}>2.5%</span>
-          </Rise>
-          <div style={{ position: "absolute", left: 36, bottom: 36 }}>
-            <Rise frame={frame} at={a + 3}>
-              <div style={title(C.ink)}>given every year,</div>
-            </Rise>
-            <br />
-            <Rise frame={frame} at={a + 5}>
-              <div style={sub("rgba(13,21,18,0.7)")}>because the poor have a right in your wealth.</div>
-            </Rise>
+        <>
+          <Tag t={t} at={a} color="rgba(13,21,18,0.55)">Zakat</Tag>
+          <div style={{ position: "absolute", left: 36, top: 40 }}>
+            {t >= v && <Digits value={`${z.toFixed(1)}%`} slot={104} style={big(C.ink, 160)} />}
           </div>
-        </div>
+          <div style={{ position: "absolute", left: 36, top: 196, width: 300, height: 10, borderRadius: 7, background: "rgba(13,21,18,0.14)", overflow: "hidden" }}>
+            <div style={{ width: `${2.5 * 4 * bar}%`, height: "100%", background: C.ink, borderRadius: 7 }} />
+          </div>
+          <Bottom>
+            <Rise t={t} at={a + 0.05}><div style={title(C.ink)}>given every year,</div></Rise>
+            <br />
+            <Rise t={t} at={a + 0.1}><div style={sub("rgba(13,21,18,0.7)")}>because the poor have a right in your wealth.</div></Rise>
+          </Bottom>
+        </>
       );
+    }
     case "jumuah": {
       const days = ["S", "M", "T", "W", "T", "F", "S"];
       return (
-        <div style={pad}>
-          {tag("Friday", C.muted)}
-          <div style={{ display: "flex", gap: 10, marginTop: 40 }}>
+        <>
+          <Tag t={t} at={a} color={C.muted}>Friday</Tag>
+          <div style={{ position: "absolute", left: 36, top: 84, display: "flex", gap: 10 }}>
             {days.map((d, i) => {
-              const k = sp(frame, a + i * 2, POP);
-              const fri = i === 5;
+              const kk = sp(t, v + i * 0.04, POP);
+              const fri = i === 5 ? sp(t, v + 0.35, TINY) : 0;
               return (
-                <div
-                  key={i}
-                  style={{
-                    width: 46,
-                    height: 56,
-                    borderRadius: 12,
-                    background: fri ? C.ink : "transparent",
-                    border: fri ? "none" : `2px solid ${C.line}`,
-                    color: fri ? C.white : C.muted,
-                    display: "grid",
-                    placeItems: "center",
-                    fontFamily: F.mono,
-                    fontSize: 20,
-                    transform: `scale(${k})`,
-                  }}
-                >
-                  {d}
+                <div key={i} style={{ position: "relative", width: 46, height: 56, borderRadius: 12, border: `2px solid ${C.line}`, transform: `scale(${kk})`, overflow: "hidden" }}>
+                  <div style={{ position: "absolute", inset: 0, background: C.ink, transform: `translateY(${(1 - fri) * 100}%)` }} />
+                  <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", fontFamily: F.mono, fontSize: 20, color: fri > 0.5 ? C.white : C.muted }}>{d}</div>
                 </div>
               );
             })}
           </div>
-          <div style={{ position: "absolute", left: 36, bottom: 36 }}>
-            <Rise frame={frame} at={a + 2}>
-              <div style={title(C.ink)}>Jumuʿah</div>
-            </Rise>
+          <Bottom>
+            <Rise t={t} at={a + 0.05}><div style={title(C.ink)}>Jumuʿah</div></Rise>
             <br />
-            <Rise frame={frame} at={a + 4}>
-              <div style={sub(C.muted)}>Every week, the Ummah gathers.</div>
-            </Rise>
-          </div>
-        </div>
+            <Rise t={t} at={a + 0.1}><div style={sub(C.muted)}>Every week, the Ummah gathers.</div></Rise>
+          </Bottom>
+        </>
       );
     }
   }
-  return null;
 };
 
-export const Bento: React.FC<{ frame: number }> = ({ frame }) => {
-  const w1 = tw("Geist", 600, 46, H1) + 120;
-  const w2 = tw("Geist", 600, 46, H2) + 120;
-  const headW = multi(frame, w1, [[s(10), w2]]);
-  const headOut = 1 - sp(frame, s(13.7), FLOOD);
-  const head = rectLerp(FULL, cRect(960, HEAD_Y, headW * headOut, 104 * headOut), sp(frame, s(0), FLOOD));
+export const Bento: React.FC<{ t: number }> = ({ t }) => {
+  const SAWM = rectOf("sawm");
+  const press = sp(t, T.bentoClick - 0.06, { w: 60, z: 1 }) - sp(t, T.bentoClick + 0.05, { w: 26, z: 0.8 });
 
-  // Camera leans toward the tile the cursor is about to press.
-  const zk = sp(frame, s(12), { damping: 26, stiffness: 60 });
-  const zoom = 1 + 0.14 * zk;
-
-  const floodK = sp(frame, FLOOD_AT, FLOOD);
+  const tiles = (Object.keys(TILES) as Key[]).map((k) => {
+    const full = rectOf(k);
+    let r: Rect;
+    let a: number; // content enter time
+    if (k === "salah") {
+      r = rectLerp(MERGED, full, gl(t, T.bento, 0.8));
+      a = T.bento + 0.55;
+    } else {
+      const [, delay, edge] = UNFOLD.find((u) => u[0] === k)!;
+      const u = gl(t, T.unfold + delay, 0.6);
+      r = edge === "left" ? { ...full, w: full.w * u, r: R * Math.min(1, u * 3) } : { ...full, h: full.h * u, r: R * Math.min(1, u * 3) };
+      a = T.unfold + delay + 0.3;
+    }
+    if (k === "sawm") {
+      const c = cRect(SAWM.x + SAWM.w / 2, SAWM.y + SAWM.h / 2, SAWM.w * (1 - 0.03 * press), SAWM.h * (1 - 0.03 * press), R);
+      r = t >= T.bentoClick - 0.1 ? c : r;
+      if (t >= T.flood1) r = flood(t, T.flood1, c, FLOOD_DUR);
+    }
+    return { k, r, a, full };
+  });
 
   return (
-    <AbsoluteFill style={{ background: C.paper }}>
-      <AbsoluteFill style={{ transform: `scale(${zoom})`, transformOrigin: `${SAWM_C.x}px ${SAWM_C.y}px` }}>
-        {tiles.map((t) => {
-          const k = sp(frame, t.at, POP);
-          if (k < 0.001) return null;
-          const cx = t.rect.x + t.rect.w / 2;
-          const cy = t.rect.y + t.rect.h / 2;
-          const isSawm = t.key === "sawm";
-          const pressK = isSawm
-            ? sp(frame, CLICK - 4, { damping: 30, stiffness: 600 }) - sp(frame, CLICK + 3, { damping: 18, stiffness: 300 })
-            : 0;
-          let r = cRect(cx, cy, t.rect.w * k * (1 - 0.03 * pressK), t.rect.h * k * (1 - 0.03 * pressK), R * k);
-          if (isSawm) r = rectLerp(r, floodRect(cx, cy), floodK);
-          return (
-            <Shape key={t.key} rect={r} color={t.bg} style={{ zIndex: isSawm ? 5 : 1 }}>
-              <div
-                style={{
-                  position: "absolute",
-                  left: t.rect.x - r.x,
-                  top: t.rect.y - r.y,
-                  width: t.rect.w,
-                  height: t.rect.h,
-                  visibility: isSawm && floodK > 0.02 ? "hidden" : "inherit",
-                }}
-              >
-                <TileBody t={t} frame={frame} />
-              </div>
-            </Shape>
-          );
-        })}
-        <Cursor
-          frame={frame}
-          show={[s(11.5), s(14.4)]}
-          keys={[
-            { f: s(11.5), x: 1700, y: 1040 },
-            { f: s(11.7), x: 1560, y: 500 },
-          ]}
-          clicks={[CLICK]}
-        />
-      </AbsoluteFill>
-      <Shape rect={head} color={C.ink} />
-      <div style={{ position: "absolute", top: HEAD_Y, left: 0, right: 0, transform: "translateY(-50%)", textAlign: "center" }}>
-        {[
-          [H1, s(1), s(10)],
-          [H2, s(10) + 4, s(13.6)],
-        ].map(([txt, at, out]) => (
-          <div key={txt as string} style={{ position: "absolute", left: 0, right: 0, top: 0, transform: "translateY(-50%)" }}>
-            <Rise frame={frame} at={at as number} out={out as number}>
-              <span style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 46, color: C.white, letterSpacing: "-0.01em" }}>{txt}</span>
-            </Rise>
-          </div>
-        ))}
+    <>
+      <div style={{ position: "absolute", left: 160, top: 150, width: 1600, height: 90 }}>
+        <div style={{ position: "absolute", inset: 0 }}>
+          <Words t={t} at={T.unfold + 0.35} out={T.overview} per={0.05} text="Look at what you already do." style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 60, color: C.ink, letterSpacing: "-0.02em" }} />
+        </div>
+        <div style={{ position: "absolute", inset: 0 }}>
+          <Words t={t} at={T.overview + 0.3} out={T.flood1 - 0.1} per={0.05} text="You were made for discipline." style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 60, color: C.ink, letterSpacing: "-0.02em" }} />
+        </div>
       </div>
-      <Hud frame={frame} at={s(1)} out={s(13.8)} index={2} color={C.ink} />
-    </AbsoluteFill>
+      {tiles.map(({ k, r, a, full }) => {
+        if (r.w < 0.5 || r.h < 0.5) return null;
+        const flooding = k === "sawm" && t >= T.flood1;
+        return (
+          <Shape key={k} rect={r} color={BG[k]} style={{ zIndex: flooding ? 10 : 1, boxShadow: BG[k] === C.white ? "0 10px 30px rgba(13,40,30,.06)" : undefined }}>
+            {!flooding && (
+              <div style={{ position: "absolute", left: full.x - r.x, top: full.y - r.y, width: full.w, height: full.h }}>
+                <TileBody k={k} t={t} a={a} />
+              </div>
+            )}
+          </Shape>
+        );
+      })}
+      <Cursor
+        t={t}
+        show={[T.overview + 0.45, T.bentoClick + 0.2]}
+        keys={[
+          [T.overview + 0.45, 1720, 1020],
+          [T.overview + 0.47, 1540, 480, 0.55],
+        ]}
+        clicks={[T.bentoClick]}
+        hovers={[[T.bentoClick - 0.3, T.bentoClick + 0.2]]}
+      />
+    </>
   );
 };

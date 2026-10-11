@@ -1,21 +1,12 @@
 import React from "react";
-import { AbsoluteFill } from "remotion";
-import { b, FULL, multi, POP, Rect, rectLerp, sp, SOFT, SNAP } from "../lib/anim";
-import { C, F } from "../lib/theme";
-import { Mono, Rise, Shape, tw, Words } from "../ui/primitives";
-import { RefChip } from "../ui/Quote";
-import { Hud } from "../ui/Hud";
-import { Sfx, T } from "../timeline";
+import { C, F, SHADOW } from "../lib/theme";
+import { contract, exitK, gl, multi, POP, Rect, sp, SOFT } from "../lib/motion";
+import { Mono, RefChip, Rise, Shape, tw, Words } from "../ui/kit";
+import { T } from "../script";
 
-const s = (beats: number) => T.book + b(beats);
+/** Designed cover (a stand-in, not a photo). Plain double frame + arch outline — no star shapes. */
+export const BOOK: Rect = { x: 236, y: 170, w: 500, h: 740, r: 14 };
 
-/** The book cover the emerald contracts into. Designed stand-in, not a photo. */
-const BOOK: Rect = { x: 236, y: 170, w: 500, h: 740, r: 14 };
-const OUT1 = s(13); // first half (al-Dāʾ wa al-Dawāʾ) leaves
-const RECOLOR = s(13); // cover repaints into al-Fawāʾid
-const EXIT = s(32); // everything leaves; chain pill hands over to the day bar
-
-/** The chain from al-Fawāʾid p.45 (Ibn al-Qayyim). */
 export const CHAIN = [
   { ar: "خَطْرَة", en: "a passing thought" },
   { ar: "فِكْرَة", en: "a thought you dwell on" },
@@ -24,173 +15,153 @@ export const CHAIN = [
   { ar: "فِعْل", en: "an action" },
   { ar: "عَادَة", en: "a habit" },
 ];
-const STAGE = (i: number) => s(16 + i * 2);
-export const CHAIN_C = { x: 1310, y: 560 };
+export const CHAIN_C = { x: 1310, y: 520 };
 export const CHAIN_H = 132;
-const chainW = (i: number) => tw("Amiri", 700, 62, CHAIN[i].ar) + 30 + tw("Geist", 500, 32, CHAIN[i].en) + 120;
+const chainW = (i: number) => tw("Plex", 700, 58, CHAIN[i].ar) + 30 + tw("Geist", 500, 32, CHAIN[i].en) + 120;
 export const CHAIN_LAST_W = chainW(CHAIN.length - 1);
 
-export const BOOK_SFX: Sfx[] = [
-  { f: s(0), kind: "contract" },
-  { f: s(1), kind: "draw" },
-  { f: s(1.5), kind: "pop" },
-  { f: s(2), kind: "rise" },
-  { f: s(5), kind: "rise" },
-  { f: s(6.5), kind: "rise" },
-  { f: s(8.5), kind: "pop" },
-  { f: s(10), kind: "chime" },
-  { f: RECOLOR, kind: "swap" },
-  ...CHAIN.map((_, i) => ({ f: STAGE(i), kind: (i === 0 ? "pop" : "swap") as Sfx["kind"] })),
-  { f: s(28), kind: "rise" },
-  { f: s(29.5), kind: "pop" },
-  { f: EXIT, kind: "swap" },
-];
+const ARCH = "M -62 70 V -6 C -62 -48 -24 -66 0 -96 C 24 -66 62 -48 62 -6 V 70";
 
-const Star: React.FC<{ k: number; color: string }> = ({ k, color }) => (
-  <svg width={150} height={150} viewBox="-75 -75 150 150" style={{ transform: `scale(${k}) rotate(${(1 - k) * -45}deg)` }}>
-    <rect x={-46} y={-46} width={92} height={92} fill="none" stroke={color} strokeWidth={2.5} />
-    <rect x={-46} y={-46} width={92} height={92} fill="none" stroke={color} strokeWidth={2.5} transform="rotate(45)" />
-    <circle r={26} fill="none" stroke={color} strokeWidth={2} />
-    <circle r={6} fill={color} />
-  </svg>
-);
-
-const Cover: React.FC<{ frame: number }> = ({ frame }) => {
-  const border = sp(frame, s(1), { damping: 26, stiffness: 50 });
-  const spine = sp(frame, s(1), SOFT);
-  const paint = sp(frame, RECOLOR, { damping: 28, stiffness: 120 });
-  const center: React.CSSProperties = { position: "absolute", left: 0, right: 0, textAlign: "center", direction: "rtl" };
+const Cover: React.FC<{ t: number }> = ({ t }) => {
+  const border = gl(t, T.cover, 1.1);
+  const arch = gl(t, T.cover + 0.2, 1.0);
+  const paint = gl(t, T.repaint, 0.7);
+  const ctr: React.CSSProperties = { position: "absolute", left: 0, right: 0, textAlign: "center", direction: "rtl" };
   return (
     <>
-      {/* repaint: ink sweeps across from the right edge (Arabic books open from the right) */}
-      <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: `${paint * 100}%`, background: C.ink }} />
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 22 * spine, background: "rgba(0,0,0,0.28)" }} />
-      <svg width={BOOK.w} height={BOOK.h} style={{ position: "absolute", inset: 0 }}>
-        <rect x={34} y={34} width={BOOK.w - 68} height={BOOK.h - 68} rx={6} fill="none" stroke={C.gold} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
-        <rect x={46} y={46} width={BOOK.w - 92} height={BOOK.h - 92} rx={4} fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
-      </svg>
-      <div style={{ position: "absolute", left: BOOK.w / 2 - 75, top: 92 }}>
-        <Star k={sp(frame, s(1.5), POP)} color={C.gold} />
-      </div>
-      <div style={{ ...center, top: 290, fontFamily: F.ar, fontWeight: 700, fontSize: 82, color: C.goldSoft, lineHeight: 1.5 }}>
-        <Rise frame={frame} at={s(2)} out={OUT1} pad="0.3em">الداء والدواء</Rise>
-      </div>
-      <div style={{ ...center, top: 290, fontFamily: F.ar, fontWeight: 700, fontSize: 92, color: C.goldSoft, lineHeight: 1.5 }}>
-        <Rise frame={frame} at={RECOLOR + 8} pad="0.3em">الفوائد</Rise>
-      </div>
-      <div style={{ ...center, top: 430, fontFamily: F.ar, fontSize: 30, color: "rgba(255,253,248,0.8)", lineHeight: 1.55 }}>
-        <Rise frame={frame} at={s(2.5)} out={OUT1} pad="0.3em">الجواب الكافي</Rise>
-        <br />
-        <Rise frame={frame} at={s(2.7)} out={OUT1} pad="0.3em">لمن سأل عن الدواء الشافي</Rise>
-      </div>
+      {/* ink paints across from the right edge (Arabic books open from the right) */}
       <div
         style={{
           position: "absolute",
-          left: BOOK.w / 2 - 90,
-          top: 560,
-          width: 180 * sp(frame, s(3), SOFT),
-          height: 2,
-          background: C.gold,
-          transformOrigin: "center",
-          marginLeft: 90 * (1 - sp(frame, s(3), SOFT)),
+          inset: 0,
+          background: C.ink,
+          WebkitMaskImage: `linear-gradient(to left, black ${paint * 120 - 20}%, transparent ${paint * 120}%)`,
+          maskImage: `linear-gradient(to left, black ${paint * 120 - 20}%, transparent ${paint * 120}%)`,
         }}
       />
-      <div style={{ ...center, top: 590, fontFamily: F.ar, fontWeight: 700, fontSize: 42, color: C.white, lineHeight: 1.5 }}>
-        <Rise frame={frame} at={s(3)} pad="0.3em">ابن قيم الجوزية</Rise>
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 22 * sp(t, T.cover, SOFT), background: "rgba(0,0,0,0.25)" }} />
+      <svg width={BOOK.w} height={BOOK.h} style={{ position: "absolute", inset: 0 }}>
+        <rect x={34} y={34} width={BOOK.w - 68} height={BOOK.h - 68} rx={6} fill="none" stroke={C.gold} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
+        <rect x={46} y={46} width={BOOK.w - 92} height={BOOK.h - 92} rx={4} fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
+        <g transform={`translate(${BOOK.w / 2} 196)`}>
+          <path d={ARCH} fill="none" stroke={C.gold} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - arch} />
+          <path d="M -40 70 V 4 C -40 -26 -14 -40 0 -62 C 14 -40 40 -26 40 4 V 70" fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - arch} />
+        </g>
+      </svg>
+      <div style={{ ...ctr, top: 300, fontFamily: F.ar, fontWeight: 700, fontSize: 70, color: C.goldSoft, lineHeight: 1.5 }}>
+        <Rise t={t} at={T.cover + 0.4} out={T.repaint} pad="0.3em">الداء والدواء</Rise>
       </div>
-      <div style={{ ...center, top: 655, fontFamily: F.ar, fontSize: 28, color: C.gold, lineHeight: 1.5 }}>
-        <Rise frame={frame} at={s(3.5)} pad="0.3em">ت ٧٥١ هـ</Rise>
+      <div style={{ ...ctr, top: 300, fontFamily: F.ar, fontWeight: 700, fontSize: 80, color: C.goldSoft, lineHeight: 1.5 }}>
+        <Rise t={t} at={T.repaint + 0.3} pad="0.3em">الفوائد</Rise>
+      </div>
+      <div style={{ ...ctr, top: 430, fontFamily: F.ar, fontSize: 27, color: "rgba(255,253,248,0.8)", lineHeight: 1.6 }}>
+        <Rise t={t} at={T.cover + 0.6} out={T.repaint} pad="0.3em">الجواب الكافي</Rise>
+        <br />
+        <Rise t={t} at={T.cover + 0.66} out={T.repaint} pad="0.3em">لمن سأل عن الدواء الشافي</Rise>
+      </div>
+      <div style={{ position: "absolute", left: BOOK.w / 2 - 90, top: 556, width: 180, height: 2, background: C.gold, transform: `scaleX(${sp(t, T.cover + 0.8, SOFT)})` }} />
+      <div style={{ ...ctr, top: 580, fontFamily: F.ar, fontWeight: 600, fontSize: 38, color: C.white, lineHeight: 1.6 }}>
+        <Rise t={t} at={T.cover + 0.9} pad="0.3em">ابن قيم الجوزية</Rise>
+      </div>
+      <div style={{ ...ctr, top: 646, fontFamily: F.ar, fontSize: 25, color: C.gold, lineHeight: 1.6 }}>
+        <Rise t={t} at={T.cover + 1.0} pad="0.3em">ت ٧٥١ هـ</Rise>
       </div>
     </>
   );
 };
 
-export const Book: React.FC<{ frame: number }> = ({ frame }) => {
-  // emerald contracts from full frame into the cover; later the cover slides out left (page push)
-  const push = sp(frame, EXIT - 6, SNAP);
-  let book = rectLerp(FULL, BOOK, sp(frame, s(0), { damping: 30, stiffness: 170 }));
-  book = { ...book, x: book.x - push * 900 };
-
-  // the chain pill: pops at stage 0, width follows each word
-  const pillW = multi(frame, chainW(0), CHAIN.slice(1).map((_, i) => [STAGE(i + 1), chainW(i + 1)] as [number, number]));
-  const pillK = sp(frame, STAGE(0), POP);
+export const Book: React.FC<{ t: number }> = ({ t }) => {
+  const out = exitK(t, T.bookOut, 0.45);
+  const shiftX = -out.off * 1000;
+  const book = contract(t, T.contract1, BOOK, 0.5);
   const col: React.CSSProperties = { position: "absolute", left: 860, width: 900 };
 
+  const pillW = multi(
+    t,
+    chainW(0),
+    CHAIN.slice(1).map((_, i) => [T.stages[i + 1], chainW(i + 1), { w: 13, z: 0.86 }] as [number, number, { w: number; z: number }]),
+  );
+  const pillK = sp(t, T.stages[0], POP);
+
   return (
-    <AbsoluteFill style={{ background: C.paper }}>
-      <Shape rect={book} color={C.emerald} style={{ boxShadow: `0 ${30 * sp(frame, s(1), SOFT)}px 60px rgba(13,21,18,0.18)` }}>
-        <div style={{ position: "absolute", left: BOOK.x - push * 900 - book.x, top: BOOK.y - book.y, width: BOOK.w, height: BOOK.h }}>
-          <Cover frame={frame} />
-        </div>
-      </Shape>
+    <>
+      <div style={{ position: "absolute", left: -400, top: -400, right: -400, bottom: -400, background: C.paper }} />
+      {/* the emerald contracts into the cover; the cover pushes out left at the end */}
+      <div style={{ position: "absolute", inset: 0, transform: `translateX(${shiftX}px)`, filter: out.blur > 0.05 ? `blur(${out.blur * 1.5}px)` : undefined }}>
+        <Shape rect={book} color={C.emerald} style={{ boxShadow: t > T.cover ? SHADOW : undefined }}>
+          <div style={{ position: "absolute", left: BOOK.x - book.x, top: BOOK.y - book.y, width: BOOK.w, height: BOOK.h }}>
+            <Cover t={t} />
+          </div>
+        </Shape>
+      </div>
 
       {/* ---- part 1: al-Dāʾ wa al-Dawāʾ ---- */}
-      <div style={{ ...col, top: 150 }}>
-        <Rise frame={frame} at={s(1)} out={OUT1}>
-          <Mono>04 — The cure</Mono>
+      <div style={{ ...col, top: 140 }}>
+        <Rise t={t} at={T.readCure} out={T.cureOut}>
+          <Mono>03 — The cure</Mono>
         </Rise>
-        <div style={{ height: 30 }} />
-        <Rise frame={frame} at={s(2)} out={OUT1}>
+        <div style={{ height: 26 }} />
+        <Rise t={t} at={T.readCure + 0.1} out={T.cureOut}>
           <span style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 64, color: C.ink, letterSpacing: "-0.02em" }}>Ibn al-Qayyim</span>
         </Rise>
         <br />
-        <Rise frame={frame} at={s(2.5)} out={OUT1}>
+        <Rise t={t} at={T.readCure + 0.2} out={T.cureOut}>
           <span style={{ fontFamily: F.ui, fontSize: 30, color: C.muted }}>Damascus · died 751 AH</span>
         </Rise>
-        <div style={{ height: 34 }} />
-        <Words frame={frame} at={s(5)} out={OUT1} stagger={1} text="opened his book al-Dāʾ wa al-Dawāʾ with this hadith:" style={{ fontFamily: F.ui, fontSize: 34, color: C.ink2 }} />
-        <div style={{ height: 22 }} />
+        <div style={{ height: 30 }} />
+        <Words t={t} at={T.readCure + 0.6} out={T.cureOut} per={0.03} text="opened his book al-Dāʾ wa al-Dawāʾ with this hadith:" style={{ fontFamily: F.ui, fontSize: 34, color: C.ink2 }} />
+        <div style={{ height: 18 }} />
         <Words
-          frame={frame}
-          at={s(6.5)}
-          out={OUT1}
+          t={t}
+          at={T.readCure + 1.2}
+          out={T.cureOut}
+          per={0.07}
           rtl
           text="مَا أَنْزَلَ اللَّهُ دَاءً إِلَّا أَنْزَلَ لَهُ شِفَاءً"
           pad="0.3em"
-          style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 76, color: C.emerald, lineHeight: 1.5 }}
+          style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 62, color: C.emerald, lineHeight: 1.6 }}
         />
-        <div style={{ height: 14 }} />
+        <div style={{ height: 12 }} />
         <Words
-          frame={frame}
-          at={s(7.5)}
-          out={OUT1}
-          stagger={1}
+          t={t}
+          at={T.readCure + 2.0}
+          out={T.cureOut}
+          per={0.025}
           text="“Allah has not sent down any disease except that He also sent down its cure.”"
           style={{ fontFamily: F.ui, fontSize: 36, color: C.ink, lineHeight: 1.35 }}
         />
-        <div style={{ height: 26 }} />
-        <RefChip frame={frame} at={s(8.5)} out={OUT1} color={C.ink}>
+        <div style={{ height: 24 }} />
+        <RefChip t={t} at={T.readCure + 2.6} out={T.cureOut} color={C.ink}>
           ṢAḤĪḤ AL-BUKHĀRĪ · 5678
         </RefChip>
-        <div style={{ height: 40 }} />
+        <div style={{ height: 36 }} />
         <Words
-          frame={frame}
-          at={s(10)}
-          out={OUT1}
-          stagger={2}
+          t={t}
+          at={T.readCure + 3.2}
+          out={T.cureOut}
+          per={0.04}
           text="The heart has its illnesses too, and every one has a cure."
           style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 38, color: C.emerald, lineHeight: 1.3 }}
         />
       </div>
 
-      {/* ---- part 2: al-Fawāʾid, how a habit is born ---- */}
-      <div style={{ ...col, top: 150 }}>
-        <Rise frame={frame} at={RECOLOR + 10} out={EXIT}>
-          <Mono>05 — How a habit is born</Mono>
+      {/* ---- part 2: al-Fawāʾid — how a habit is born ---- */}
+      <div style={{ ...col, top: 236 }}>
+        <Rise t={t} at={T.chainHead - 0.1} out={T.bookOut}>
+          <Mono>04 — How a habit is born</Mono>
         </Rise>
-        <div style={{ height: 30 }} />
+        <div style={{ height: 18 }} />
         <Words
-          frame={frame}
-          at={s(14)}
-          out={EXIT}
-          stagger={2}
+          t={t}
+          at={T.chainHead}
+          out={T.bookOut}
+          per={0.04}
           text="In al-Fawāʾid, he traces it step by step."
-          style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 48, color: C.ink, letterSpacing: "-0.015em", lineHeight: 1.2 }}
+          style={{ fontFamily: F.ui, fontWeight: 600, fontSize: 44, color: C.ink, letterSpacing: "-0.015em" }}
         />
       </div>
 
-      {/* the chain pill */}
-      {pillK > 0.001 && (
+      {pillK > 0.002 && (
         <Shape
           rect={{
             x: CHAIN_C.x - (pillW * pillK) / 2,
@@ -202,48 +173,43 @@ export const Book: React.FC<{ frame: number }> = ({ frame }) => {
           color={C.ink}
         />
       )}
-      {CHAIN.map((c, i) => (
-        <div
-          key={c.ar}
-          style={{
-            position: "absolute",
-            left: CHAIN_C.x - 600,
-            width: 1200,
-            top: CHAIN_C.y,
-            transform: "translateY(-50%)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 30,
-          }}
-        >
-          <Rise frame={frame} at={STAGE(i) + 3} out={i < CHAIN.length - 1 ? STAGE(i + 1) : EXIT - 8} pad="0.3em">
-            <span style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 62, color: C.goldSoft, lineHeight: 1.5 }}>{c.ar}</span>
-          </Rise>
-          <Rise frame={frame} at={STAGE(i) + 5} out={i < CHAIN.length - 1 ? STAGE(i + 1) : EXIT - 8}>
-            <span style={{ fontFamily: F.ui, fontWeight: 500, fontSize: 32, color: C.white }}>{c.en}</span>
-          </Rise>
-        </div>
-      ))}
+      {CHAIN.map((c, i) => {
+        const at = T.stages[i] + 0.12;
+        const end = i < CHAIN.length - 1 ? T.stages[i + 1] - 0.05 : T.bookOut - 0.15;
+        return (
+          <div
+            key={c.ar}
+            style={{
+              position: "absolute",
+              left: CHAIN_C.x - 600,
+              width: 1200,
+              top: CHAIN_C.y,
+              transform: "translateY(-50%)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 30,
+            }}
+          >
+            <Rise t={t} at={at} out={end} pad="0.3em">
+              <span style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 58, color: C.goldSoft, lineHeight: 1.6 }}>{c.ar}</span>
+            </Rise>
+            <Rise t={t} at={at + 0.05} out={end}>
+              <span style={{ fontFamily: F.ui, fontWeight: 500, fontSize: 32, color: C.white, whiteSpace: "nowrap" }}>{c.en}</span>
+            </Rise>
+          </div>
+        );
+      })}
       {/* step track */}
-      <div style={{ position: "absolute", left: CHAIN_C.x - 330, top: CHAIN_C.y + 120, width: 660, height: 60 }}>
-        <div
-          style={{
-            position: "absolute",
-            left: 15,
-            top: 14,
-            height: 2,
-            background: C.line,
-            width: 630 * sp(frame, STAGE(0), SOFT) * (1 - sp(frame, EXIT - 10, SNAP)),
-          }}
-        />
+      <div style={{ position: "absolute", left: CHAIN_C.x - 330, top: CHAIN_C.y + 116, width: 660, height: 60 }}>
+        <div style={{ position: "absolute", left: 15, top: 14, height: 2, background: C.line, width: 630 * sp(t, T.stages[0], SOFT) * (1 - exitK(t, T.bookOut - 0.2).off) }} />
         {CHAIN.map((_, i) => {
-          const on = sp(frame, STAGE(i), POP);
-          const k = sp(frame, STAGE(0) + i * 2, POP) * (1 - sp(frame, EXIT - 10 + i, SNAP));
+          const on = sp(t, T.stages[i], POP);
+          const k = sp(t, T.stages[0] + i * 0.05, POP) * (1 - exitK(t, T.bookOut - 0.2 + i * 0.02, 0.28).off);
           return (
             <div key={i} style={{ position: "absolute", left: i * 126, top: 0, width: 30, transform: `scale(${k})` }}>
-              <div style={{ width: 30, height: 30, borderRadius: 15, background: C.paper, border: `2px solid ${C.ink}` }}>
-                <div style={{ margin: 5, width: 16, height: 16, borderRadius: 8, background: C.ink, transform: `scale(${on})` }} />
+              <div style={{ width: 30, height: 30, borderRadius: 15, background: C.paper, border: `2px solid ${C.ink}`, boxSizing: "border-box", display: "grid", placeItems: "center" }}>
+                <div style={{ width: 16, height: 16, borderRadius: 8, background: C.ink, transform: `scale(${on})` }} />
               </div>
               <div style={{ fontFamily: F.mono, fontSize: 16, color: C.muted, marginTop: 8, textAlign: "center" }}>0{i + 1}</div>
             </div>
@@ -251,33 +217,32 @@ export const Book: React.FC<{ frame: number }> = ({ frame }) => {
         })}
       </div>
       {/* conclusion */}
-      <div style={{ ...col, top: 790, textAlign: "right" }}>
+      <div style={{ ...col, top: 760, textAlign: "right" }}>
         <Words
-          frame={frame}
-          at={s(28)}
-          out={EXIT}
+          t={t}
+          at={T.conclude}
+          out={T.bookOut}
+          per={0.05}
           rtl
-          stagger={2}
           text="فإن لم تتداركهُ بضدِّه صار عادةً، فيصعُبُ عليك الانتقالُ عنها"
           pad="0.3em"
-          style={{ fontFamily: F.ar, fontWeight: 700, fontSize: 40, color: C.ink, lineHeight: 1.5 }}
+          style={{ fontFamily: F.ar, fontWeight: 600, fontSize: 38, color: C.ink, lineHeight: 1.6 }}
         />
       </div>
-      <div style={{ ...col, top: 870 }}>
+      <div style={{ ...col, top: 846 }}>
         <Words
-          frame={frame}
-          at={s(29)}
-          out={EXIT}
-          stagger={1}
+          t={t}
+          at={T.conclude + 0.6}
+          out={T.bookOut}
+          per={0.02}
           text="“If you do not counter it with its opposite, it becomes a habit, and then it is hard for you to leave it.”"
           style={{ fontFamily: F.ui, fontSize: 28, color: C.ink2, lineHeight: 1.35 }}
         />
-        <div style={{ height: 18 }} />
-        <RefChip frame={frame} at={s(29.5)} out={EXIT} color={C.ink}>
+        <div style={{ height: 16 }} />
+        <RefChip t={t} at={T.conclude + 1.0} out={T.bookOut} color={C.ink}>
           IBN AL-QAYYIM · AL-FAWĀʾID · P. 45
         </RefChip>
       </div>
-      <Hud frame={frame} at={s(1)} out={EXIT} index={4} color={C.ink} />
-    </AbsoluteFill>
+    </>
   );
 };

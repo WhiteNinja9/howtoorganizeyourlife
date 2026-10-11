@@ -5,8 +5,9 @@ from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
 import io
 
-FONTS = {"Geist": "public/fonts/geist.woff2", "Amiri400": "public/fonts/amiri-400.woff2",
-         "Amiri700": "public/fonts/amiri-700.woff2", "GeistMono": "public/fonts/geist-mono.woff2"}
+FONTS = {"Geist": "public/fonts/geist.woff2", "GeistMono": "public/fonts/geist-mono.woff2",
+         "Plex400": "public/fonts/plex-400.woff2", "Plex600": "public/fonts/plex-600.woff2",
+         "Plex700": "public/fonts/plex-700.woff2"}
 
 def blob_for(name, weight):
     f = TTFont(FONTS[name])
@@ -29,7 +30,7 @@ def width(font, weight, size, text):
 spec = json.load(open("scripts/labels.json"))
 out = {}
 for font, weight, size, text in spec:
-    fam = font if font in ("Geist", "GeistMono") else f"Amiri{weight}"
+    fam = font if font in ("Geist", "GeistMono") else f"Plex{weight}"
     out[f"{font}|{weight}|{size}|{text}"] = round(width(fam, weight, size, text), 1)
 json.dump(out, open("src/lib/widths.json", "w"), ensure_ascii=False, indent=1)
 print(len(out), "labels measured")
