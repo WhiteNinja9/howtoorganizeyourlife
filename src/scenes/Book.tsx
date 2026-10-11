@@ -5,7 +5,7 @@ import { Mono, RefChip, Rise, Shape, tw, Words } from "../ui/kit";
 import { Img, staticFile } from "remotion";
 import { T } from "../script";
 
-/** Part 1 shows the real cover photo of al-Jawāb al-Kāfī; al-Fawāʾid is a drawn cover (double frame + arch, no star shapes). */
+/** Real cover photos supplied by the owner: al-Jawāb al-Kāfī (al-Dāʾ wa al-Dawāʾ), then al-Fawāʾid. */
 export const BOOK: Rect = { x: 236, y: 170, w: 500, h: 740, r: 14 };
 
 export const CHAIN = [
@@ -21,14 +21,9 @@ export const CHAIN_H = 132;
 const chainW = (i: number) => tw("Plex", 700, 58, CHAIN[i].ar) + 30 + tw("Geist", 500, 32, CHAIN[i].en) + 120;
 export const CHAIN_LAST_W = chainW(CHAIN.length - 1);
 
-const ARCH = "M -62 70 V -6 C -62 -48 -24 -66 0 -96 C 24 -66 62 -48 62 -6 V 70";
-
 const Cover: React.FC<{ t: number }> = ({ t }) => {
   const reveal = gl(t, T.cover - 0.1, 0.8);
   const paint = gl(t, T.repaint, 0.7);
-  const border = gl(t, T.repaint + 0.25, 1.1);
-  const arch = gl(t, T.repaint + 0.4, 1.0);
-  const ctr: React.CSSProperties = { position: "absolute", left: 0, right: 0, textAlign: "center", direction: "rtl" };
   return (
     <>
       {/* the real cover (photo the owner supplied); the emerald dissolves outward from its centre */}
@@ -44,35 +39,21 @@ const Cover: React.FC<{ t: number }> = ({ t }) => {
           }}
         />
       )}
-      {/* ink paints across from the right edge (Arabic books open from the right) into al-Fawāʾid */}
-      <div
+      {/* the al-Fawāʾid cover sweeps across from the right edge (Arabic books open from the right) */}
+      <Img
+        src={staticFile("img/al-fawaid.jpg")}
         style={{
           position: "absolute",
           inset: 0,
-          background: C.ink,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
           WebkitMaskImage: `linear-gradient(to left, black ${paint * 120 - 20}%, transparent ${paint * 120}%)`,
           maskImage: `linear-gradient(to left, black ${paint * 120 - 20}%, transparent ${paint * 120}%)`,
+          visibility: paint > 0 ? "inherit" : "hidden",
         }}
       />
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 22 * sp(t, T.cover, SOFT), background: "rgba(0,0,0,0.25)" }} />
-      <svg width={BOOK.w} height={BOOK.h} style={{ position: "absolute", inset: 0 }}>
-        <rect x={34} y={34} width={BOOK.w - 68} height={BOOK.h - 68} rx={6} fill="none" stroke={C.gold} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
-        <rect x={46} y={46} width={BOOK.w - 92} height={BOOK.h - 92} rx={4} fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - border} />
-        <g transform={`translate(${BOOK.w / 2} 196)`}>
-          <path d={ARCH} fill="none" stroke={C.gold} strokeWidth={2.5} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - arch} />
-          <path d="M -40 70 V 4 C -40 -26 -14 -40 0 -62 C 14 -40 40 -26 40 4 V 70" fill="none" stroke={C.gold} strokeWidth={1.2} opacity={0.7} pathLength={1} strokeDasharray={1} strokeDashoffset={1 - arch} />
-        </g>
-      </svg>
-      <div style={{ ...ctr, top: 300, fontFamily: F.ar, fontWeight: 700, fontSize: 80, color: C.goldSoft, lineHeight: 1.5 }}>
-        <Rise t={t} at={T.repaint + 0.3} pad="0.3em">الفوائد</Rise>
-      </div>
-      <div style={{ position: "absolute", left: BOOK.w / 2 - 90, top: 556, width: 180, height: 2, background: C.gold, transform: `scaleX(${sp(t, T.repaint + 0.45, SOFT)})` }} />
-      <div style={{ ...ctr, top: 580, fontFamily: F.ar, fontWeight: 600, fontSize: 38, color: C.white, lineHeight: 1.6 }}>
-        <Rise t={t} at={T.repaint + 0.5} pad="0.3em">ابن قيم الجوزية</Rise>
-      </div>
-      <div style={{ ...ctr, top: 646, fontFamily: F.ar, fontSize: 25, color: C.gold, lineHeight: 1.6 }}>
-        <Rise t={t} at={T.repaint + 0.6} pad="0.3em">ت ٧٥١ هـ</Rise>
-      </div>
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 22 * sp(t, T.cover, SOFT), background: "linear-gradient(to right, rgba(0,0,0,0.3), rgba(0,0,0,0))" }} />
     </>
   );
 };

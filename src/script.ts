@@ -217,3 +217,11 @@ export const CUES: Cue[] = [
   [T.toDot, "pop", -4],
   [T.unfoldWord, "swish", -3],
 ];
+
+/** Ayat in the King Fahd Complex QCF V2 page fonts (codes from api.quran.com, one glyph per word). */
+export const AYAT = {
+  v3_110_a: ["\uFC4E", "\uFC4F", "\uFC50", "\uFC51", "\uFC52"],
+  v3_110_b: ["\uFC53", "\uFC54", "\uFC55", "\uFC56", "\uFC57", "\uFC58", "\uFC59\uFC5A"],
+  v13_11_a: ["\uFC9C", "\uFC9D", "\uFC9E", "\uFC9F", "\uFCA0", "\uFCA1"],
+  v13_11_b: ["\uFCA2", "\uFCA3", "\uFCA4", "\uFCA5\uFCA6"],
+};

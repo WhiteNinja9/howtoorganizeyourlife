@@ -1,8 +1,8 @@
 import React from "react";
 import { C, F } from "../lib/theme";
 import { exitK, hash, POP, sp } from "../lib/motion";
-import { Mono, RefChip, Rise, Underline, Words } from "../ui/kit";
-import { T } from "../script";
+import { Ayah, Mono, RefChip, Rise, Words } from "../ui/kit";
+import { AYAT, T } from "../script";
 
 const COLS = 23;
 const ROWS = 11;
@@ -21,27 +21,17 @@ export const Within: React.FC<{ t: number }> = ({ t }) => {
         </Rise>
       </div>
       <div style={{ position: "absolute", left: 0, right: 0, top: 150, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <Words
-          t={t}
-          at={s + 0.4}
-          out={T.withinOut}
-          per={0.08}
-          rtl
-          text="إِنَّ اللَّهَ لَا يُغَيِّرُ مَا بِقَوْمٍ"
-          pad="0.35em"
-          style={{ fontFamily: F.ayah, fontSize: 104, lineHeight: 1.7, color: C.white, justifyContent: "center" }}
-        />
-        <Words
+        <Ayah t={t} at={s + 0.4} out={T.withinOut} per={0.08} words={AYAT.v13_11_a} page={250} size={108} color={C.white} />
+        <Ayah
           t={t}
           at={s + 1.2}
           out={T.withinOut}
           per={0.08}
-          rtl
-          text={"حَتَّى يُغَيِّرُوا مَا بِأَنْفُسِهِمْ"}
-          pad="0.35em"
-          style={{ fontFamily: F.ayah, fontSize: 104, lineHeight: 1.7, color: C.white, justifyContent: "center" }}
-          mark={(i) => (i === 1 ? { color: C.goldSoft } : undefined)}
-          deco={(i) => (i === 1 ? <Underline t={t} at={s + 2.0} out={T.withinOut} color={C.goldSoft} rtl /> : null)}
+          words={AYAT.v13_11_b}
+          page={250}
+          size={108}
+          color={C.white}
+          mark={{ from: 1, to: 3, color: C.goldSoft, underlineAt: s + 2.0 }}
         />
         <div style={{ height: 26 }} />
         <div style={{ width: 1240 }}>

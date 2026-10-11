@@ -153,13 +153,14 @@ export const PopIn: React.FC<{
 };
 
 /** Underline that grows from the reading start on a critical spring. */
-export const Underline: React.FC<{ t: number; at: number; out?: number; color: string; rtl?: boolean; h?: number }> = ({
+export const Underline: React.FC<{ t: number; at: number; out?: number; color: string; rtl?: boolean; h?: number; bottom?: string }> = ({
   t,
   at,
   out,
   color,
   rtl,
   h = 5,
+  bottom = "-0.05em",
 }) => {
   const k = sp(t, at, SOFT) * (1 - exitK(t, out, 0.25).off);
   return (
@@ -168,7 +169,7 @@ export const Underline: React.FC<{ t: number; at: number; out?: number; color: s
         position: "absolute",
         left: 0,
         right: 0,
-        bottom: "-0.05em",
+        bottom,
         height: h,
         borderRadius: h,
         background: color,
@@ -184,6 +185,57 @@ export const Check: React.FC<{ size?: number; color: string; stroke?: number }> 
     <path d="M5 12.5 L10 17.5 L19 7" stroke={color} strokeWidth={stroke} fill="none" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
+
+/**
+ * An ayah in its QCF V2 page font: one glyph per word, each rising through its own mask line in
+ * reading order. Words [markFrom, markTo] are coloured and get an underline that grows right → left.
+ */
+export const Ayah: React.FC<{
+  t: number;
+  at: number;
+  out?: number;
+  words: string[];
+  page: number;
+  size: number;
+  color: string;
+  per?: number;
+  mark?: { from: number; to: number; color: string; underlineAt: number };
+}> = ({ t, at, out, words, page, size, color, per = 0.07, mark }) => {
+  const word = (w: string, i: number) => (
+    <Rise key={i} t={t} at={at + i * per} out={out === undefined ? undefined : out + i * 0.012} pad="0.45em">
+      <span>{w}</span>
+    </Rise>
+  );
+  const items: React.ReactNode[] = [];
+  for (let i = 0; i < words.length; i++) {
+    if (mark && i === mark.from) {
+      items.push(
+        <span key={`m${i}`} style={{ position: "relative", display: "inline-flex", columnGap: "0.22em", color: mark.color }}>
+          {words.slice(mark.from, mark.to + 1).map((w, j) => word(w, mark.from + j))}
+          <Underline t={t} at={mark.underlineAt} out={out} color={mark.color} rtl h={Math.max(4, size * 0.05)} bottom="0.1em" />
+        </span>,
+      );
+      i = mark.to;
+    } else items.push(word(words[i], i));
+  }
+  return (
+    <div
+      style={{
+        display: "flex",
+        direction: "rtl",
+        justifyContent: "center",
+        columnGap: "0.22em",
+        fontFamily: F.qcf(page),
+        fontSize: size,
+        lineHeight: 1.7,
+        color,
+        fontFeatureSettings: '"liga" 0',
+      }}
+    >
+      {items}
+    </div>
+  );
+};
 
 /** Outlined reference chip. */
 export const RefChip: React.FC<{ t: number; at: number; out?: number; color: string; children: React.ReactNode }> = ({

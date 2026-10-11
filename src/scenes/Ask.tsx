@@ -15,10 +15,10 @@ import {
   tq,
   inv,
 } from "../lib/motion";
-import { Check, GooDefs, RefChip, Rise, Shape, tw, Underline, Words } from "../ui/kit";
+import { Ayah, Check, GooDefs, RefChip, Rise, Shape, tw, Words } from "../ui/kit";
 import { WordmarkLetters, wordmarkGeom } from "../ui/Wordmark";
 import { Cursor } from "../ui/Cursor";
-import { CHIP_H, CHIP_LABELS, CHIP_X, chipW, QUESTION, T, TYPE_TIMES } from "../script";
+import { AYAT, CHIP_H, CHIP_LABELS, CHIP_X, chipW, QUESTION, T, TYPE_TIMES } from "../script";
 
 /* ---------- geometry ---------- */
 export const PILL = cRect(960, 540, 820, 116);
@@ -34,8 +34,6 @@ const CHIPS: Rect[] = CHIP_LABELS.map((l, i) => ({ x: CHIP_X[i], y: 560 - CHIP_H
 export const MERGED_LABEL = "That is what makes us the best.";
 export const MERGED = cRect(960, 560, tw("Geist", 600, 40, MERGED_LABEL) + 112, 104);
 
-const VERSE_1 = "كُنْتُمْ خَيْرَ أُمَّةٍ أُخْرِجَتْ لِلنَّاسِ";
-const VERSE_2 = "تَأْمُرُونَ بِالْمَعْرُوفِ وَتَنْهَوْنَ عَنِ الْمُنْكَرِ وَتُؤْمِنُونَ بِاللَّهِ";
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const mix = (a: number[], b: number[], k: number) => a.map((v, i) => lerp(v, b[i], clamp01(k)));
@@ -237,28 +235,17 @@ export const Ask: React.FC<{ t: number }> = ({ t }) => {
             ĀL ʿIMRĀN · 3:110
           </RefChip>
           <div style={{ height: 18 }} />
-          <Words
+          <Ayah
             t={t}
             at={T.panel + 0.85}
             out={T.verseOut}
-            per={0.07}
-            rtl
-            text={VERSE_1}
-            pad="0.35em"
-            style={{ fontFamily: F.ayah, fontSize: 88, lineHeight: 1.75, color: C.white, justifyContent: "center" }}
-            mark={(i) => (i === 1 ? { color: C.mint } : undefined)}
-            deco={(i) => (i === 1 ? <Underline t={t} at={T.panel + 2.3} out={T.verseOut} color={C.mint} rtl h={5} /> : null)}
+            words={AYAT.v3_110_a}
+            page={64}
+            size={92}
+            color={C.white}
+            mark={{ from: 1, to: 2, color: C.mint, underlineAt: T.panel + 2.3 }}
           />
-          <Words
-            t={t}
-            at={T.panel + 1.6}
-            out={T.verseOut}
-            per={0.045}
-            rtl
-            text={VERSE_2}
-            pad="0.35em"
-            style={{ fontFamily: F.ayah, fontSize: 54, lineHeight: 1.8, color: "rgba(255,253,248,0.82)", justifyContent: "center" }}
-          />
+          <Ayah t={t} at={T.panel + 1.6} out={T.verseOut} per={0.045} words={AYAT.v3_110_b} page={64} size={58} color="rgba(255,253,248,0.85)" />
           <div style={{ height: 30 }} />
           <div style={{ width: 1220 }}>
             <Words

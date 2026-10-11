@@ -22,7 +22,8 @@ export const F = {
   ui: "Geist",
   mono: "Geist Mono",
   ar: "Plex",
-  ayah: "AyahFont",
+  /** QCF V2 mushaf page fonts: family per page */
+  qcf: (page: number) => `QCF_P${page}`,
 };
 
 export const SHADOW = "0 22px 50px rgba(13,40,30,.12), 0 2px 6px rgba(13,40,30,.06)";
@@ -34,7 +35,7 @@ const fonts = [
   loadFont({ family: F.ar, url: staticFile("fonts/plex-400.woff2"), weight: "400" }),
   loadFont({ family: F.ar, url: staticFile("fonts/plex-600.woff2"), weight: "600" }),
   loadFont({ family: F.ar, url: staticFile("fonts/plex-700.woff2"), weight: "700" }),
-  loadFont({ family: F.ayah, url: staticFile("fonts/ayah.woff2"), weight: "400" }),
+  ...[64, 250].map((p) => loadFont({ family: `QCF_P${p}`, url: staticFile(`fonts/qcf-p${p}.woff2`), weight: "400" })),
 ];
 
 export const fontsReady = Promise.all(fonts);
